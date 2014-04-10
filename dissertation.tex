@@ -1,0 +1,44 @@
+\documentclass[10pt,letterpaper,openany]{book}
+\include{preamble}
+\usepackage[hyper,nobind]{uva-seas-thesis}
+\usepackage{graphicx,epstopdf}
+\author{Yuchen Zhou}
+\title{Improving security and privacy of integrated applications using behavior-based approaches}
+\degree{Doctor of Philosophy}
+\program{Computer Engineering}
+\documenttype{dissertation}
+\graduationmonth{December}
+\graduationyear{2014}
+\begin{document}
+\maketitle
+\copyrightpage
+%--------------------
+\frontmatter
+\include{chapters/abstract}
+\begin{signatures}
+\signature[David Evans]{David Evans, Advisor}
+\signature[Joanne Bechta Dugan]{Joanne Bechta Dugan, Committee Chair}
+\signature[Shuo Chen]{Shuo Chen}
+\signature[Kevin Sullivan]{Kevin Sullivan}
+\signature[Westley Weimer]{Westley Weimer}
+\signature[Ron Williams]{Ron Williams}
+\dean{John Stiles}
+\end{signatures}
+\dedication{To everyone who's helped me succeed}
+\include{chapters/acknowledgments}
+\tableofcontents
+\listoftables
+\listoffigures
+%--------------------
+\mainmatter
+\include{chapters/introduction}
+\include{chapters/background}
+\include{chapters/explicating}
+\include{chapters/ssoscan}
+\include{chapters/esorics}
+\include{chapters/conclusion}
+%--------------------
+\backmatter
+\nocite{*}
+\bibliography{ref}
+\end{document}

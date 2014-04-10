@@ -1,0 +1,64 @@
+\chapter{Introduction}
+\label{ch:intro}
+
+Modern applications increasingly rely on code and services from multiple parties.  The need for extra functionality and better modularity drives software developers to employ third-party solutions.  These solutions differ from the traditional libraries (such as libc) since execution of integrated third-party code relies on communications with their private back end server.  The recent emergence of social network giants such as Facebook and Twitter, as well as multiple advertising and analytics services have made almost every mobile or web application a complicated mash-up.  A recent study done by Nikiforakis et al.~\cite{Nikiforakis:2012:YYI:2382196.2382274} reveals that some websites today embed (and therefore trust) scripts coming from 295 different domains!  The integration of Single Sign-On (SSO) services have been trending upwards and web statistics show that 55\% of the 10,000 most popular sites use Google Analytics, 29\% use Doubleclick Advertising.
+
+\section{Threat to Mashup Applications}
+
+The widespread integration of third-party services raises a critical problem --- how to ensure desired security and privacy properties for programs integrating third-party services.  Throughout this proposal we define a \em third-party service \em as a module or code snippet that is provided by a party other than the application developer and which communicates with its own back end server to which the application developer has limited access.  We are primarily concerned with two types of integrated applications:  
+
+1) Applications that rely on code and services provided by trusted third parties for critical security functionalities.  Some examples include authentication, authorization, file sharing and payment services.  In this case, the third party is trusted to be benign and its goal is to work together with its integrator to meet the security and privacy goals of the application.  The attacker comes from anywhere outside of both parties, it may collect and use any information available to the public.  The goal for the attacker is to exploit logic flaws and violate the intended security properties of the integrated application.  
+
+Note that analyzing and checking the security and privacy properties of such integrated applications is more difficult than a traditional app integrating a local library such as a Java class or a C library.  The key difference is that third-party services implement a significant part of functionality on their back end server, which is not controllable or even observable by the integrator.  When including a local C library, the integrator has full control --- the power to view or even modify the library.
+
+2) Applications that embed untrusted third-party components for non-security-related purposes.  In web application contexts, such third-party code often takes the form of JavaScript wrappers and helpers to ease web development, or provide add-on functionality such as analytics and advertising services.  The embedded scripts often run as the same principal as their host application and have full access to all client resources.  These services may be malicious themselves or compromised by another party to distribute malicious content. 
+
+We describe how we improve the security and privacy goals for the two scenarios in the next two subsections.
+
+\subsection{Integrating security services}
+
+In this scenario, it is important that the developer of the integrated apps understands the assumptions upon which secure use of the service relies.  Wang et al.~\cite{Wang:2012:SMY:2310656.2310691,Wang:2011:SFO:2006077.2006782} showed that even trivial and subtle misunderstandings may bring disastrous vulnerabilities in the integrated application.
+
+Therefore, finding these gaps in understanding is a key task to eliminate vulnerabilities.  We describe our approach to systematically find security-critical assumptions required by the service provider.  We model the relevant behavior of the system and ignore unimportant system details such as UI interaction and underlying network implementation.  After security assertions are inserted into the model, we run a model checker that outputs paths that may violate the assertions.  We then analyze those paths to derive bugs and missing assumptions.  After the bug is fixed or assumptions are added as facts to the model, we run the model checker again to continue this iterative approach.  We are done after all security critical components of the system have been modeled.
+
+To better understand the real-world implications, we then present the design and implementation of a tool named SSOScan, to automatically check if an application is vulnerable by testing if its behavior is consistent with the vulnerability behavior pattern we discovered.  As an example, appearance of a specific type of OAuth token in the SSO traffic may be one of the vulnerability patterns.  SSOScan can be used by an application marketplace such as Facebook's App Center or Google's Play Store.  Contrary to general fuzzing or testing techniques our proposed approach takes advantage of previously known vulnerability information to help automate and guide the tests.  
+
+\subsection{Embedding untrusted services} 
+
+In this scenario, we target a different goal --- limiting third-party scripts' access to the host application and preventing exfiltration of sensitive data to untrusted hosts.
+
+Our approach to this scenario offers fine-grained and flexible protection but relies on per-page access control policies.  We propose a fine-grained mediating mechanism for DOM content accesses and JavaScript context isolation, which any browser's built-in same-origin policy does not offer.  We implement a modified browser that understands and enforces fine-grained access control policies at the level of DOM nodes.  It restricts accesses to part of the hosting page from third-party scripts while also allowing these scripts to access the rest of the information to maintain functionality.  Needed security policies may be provided by site administrators.  To help reduce such efforts, we propose to develop an automatic policy generator which infers sensitive information based on comparing responses across sessions with different credentials.
+
+\section{Thesis}
+
+We argue that \emph{the application developers can have much higher confidence in the security and privacy of integrated applications by using behavior-based analysis and dynamic approaches}.  
+
+We show that important security assumptions are much more unlikely to be missed when the service provider explicates their SDKs and documentations before release.  Furthermore, to help ensure the security-critical instructions are correctly followed by the application developer, our evaluation results show that a scanner tool like SSOScan can automatically and efficiently vet the applications for common implementation mistakes when integrating third-party services.  In the untrusted scenario, our modified client can effectively restrict accesses to sensitive resources according to the page access control policy.
+
+\section{Dissertation Contributions}  
+
+This dissertation makes both analytical and experimental contributions addressing security and privacy issues for the two integrated application scenarios.  In particular, I make the following contributions to enhance the security of applications embedding security-critical services:
+
+\begin{itemize}
+
+\item A systematic and iterative approach to uncover assumptions needed for secure implementation of integrated application.  This approach is an improvement over several previous works which used ad hoc analysis on similar systems and gives both parties higher confidence that the system is secure with respect to the model we build.  
+
+\item Formal models of several integrated systems and runtimes.  We probe the behavior of the system and investigate the SDK code and documentation to extract security-critical parts and summarize them into compact models.  Such models are based on non-trivial study of system code, behavior and understanding, and are of great value to future studies.
+
+\item Evaluation of the explication approach on several important SDKs.  We uncover 2 bugs and 9 implicit assumptions in such systems following the explication process.  We analyze real-world applications that missed such assumption(s) and synthesize vulnerability traffic or behavior patterns that can be used in automated checking.
+
+\item SSOScan, a tool that an application marketplace such as Facebook app center, Google Play or Microsoft Live Connect developer center could use to automatically check submitted apps.  SSOScan is able to automatically determine whether the app's behavior is consistent with any known vulnerable pattern and provide guidance for developers to fix.  By taking advantage of prior knowledge of vulnerability patterns, SSOScan is able to check 80\% of applications using Facebook SSO automatically using a very short time per test cases.
+
+\item We run SSOScan on the top 20,000 US websites and present the key results from the experiment.  In addition to reporting the percentage of vulnerable applications, we also explain how vulnerability rates vary due to different ways of integrating Facebook SSO.  For the 20\% applications that SSOScan fails to scan automatically, we manually analyze them and report on the reasons for failures.  Our study reveals the complexity of automatically interacting with web sites that follow a myriad of designs, while suggesting techniques that could improve future automated testing tools. 
+
+\end{itemize}
+
+\vspace*{8pt}The contributions I make to protect applications and user privacy from embedded untrusted third-party services include:
+
+\begin{itemize}
+
+\item A modified browser that understands and enforces fine-grained DOM access control and JavaScript context isolation policies.  Compared to previous works, our proposed browser may enforce policies down to DOM node level for individual third-party scripts and does not limit the use of JavaScript to a safer subset.  Our browser also isolates the execution context of one script from another as specified by the policy.  
+
+\item An automatic policy generator that helps web application administrators generate access control policies for the modified browser.  The policy generator sends two requests, one with credentials and another without, compares two responses and marks the differences as private nodes.  We evaluate the false positive and performance numbers and combine it with the modified browser to evaluate compatibility issues.
+
+\end{itemize}

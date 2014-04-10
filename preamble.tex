@@ -1,0 +1,78 @@
+\usepackage{url}
+% \usepackage{times}
+% \usepackage{mathptmx}
+% \usepackage{epstopdf}
+% \usepackage{verbatim}
+% \usepackage{subfigure}
+% \usepackage[noend]{algorithmic}
+% \usepackage{stmaryrd}
+\usepackage{amsmath}
+% \usepackage{multirow}
+\usepackage{listings}
+% \usepackage{color}
+% \usepackage[sort]{cite}
+% \usepackage{graphicx}
+% \usepackage{graphics}
+% \usepackage{epsfig}
+\usepackage{comment}
+%\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+%\usepackage{varwidth}
+\usepackage{listings}
+% \usepackage{graphicx}
+% \usepackage{xspace}
+% \usepackage{multirow}
+% \usepackage{makeidx}
+% \usepackage{threeparttable}
+% \usepackage{booktabs}
+\usepackage{color}
+% \usepackage[usenames,dvipsnames]{xcolor}
+
+\newcommand\shortsection[1]{\vspace*{6pt}{\noindent\bf #1.}}
+
+\newcommand{\authnote}[2]{{\textbf{$\mathbf{\big[}$~#1's note:}}
+    \textbf{\em\small #2}~{$\mathbf{\big]}$}}
+
+\newcommand{\ynote}[1]{\textcolor{blue}{\bf \emph{Y: #1}}}
+\newcommand{\dnote}[1]{\textcolor{red}{\bf \emph{D: #1}}}
+
+%\newcommand{\ynote}[1]{\textcolor{blue}{\bf \emph{}}}
+%\newcommand{\dnote}[1]{\textcolor{blue}{\bf \emph{}}}
+
+\newcommand{\TODO}[1]{\textcolor{blue}{TODO:#1}}
+\newcommand\keyword[1]{{\sf\small{#1}}}
+
+\algnewcommand{\AND}{\textbf{and}}
+\algnewcommand{\NOT}{\textbf{not}}
+
+\newcommand{\code}[1]{{\small\lstinline!#1!}}
+\newcommand{\toolName}{SSOScan\xspace}
+\newcommand{\var}[1]{{\ttfamily#1}}% variable
+\hyphenation{SSO-Scan}
+\lstdefinelanguage{JavaScript}{
+  keywords={typeof, new, true, false, catch, function, return, null, catch, switch, var, if, in, while, do, else, case, break, eval, window},
+  keywordstyle=\color{blue}\bfseries,
+  ndkeywords={class, export, boolean, throw, implements, import, this},
+  ndkeywordstyle=\color{darkgray}\bfseries,
+  identifierstyle=\color{black},
+  sensitive=false,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{purple}\ttfamily,	
+  stringstyle=\color{red}\ttfamily,
+  morestring=[b]',
+  morestring=[b]"
+}
+
+\lstset{language=JavaScript,
+    basicstyle=\sffamily\small,
+    keywordstyle=\bfseries,
+    showstringspaces=false,
+		numbers=left,
+		numbersep=10pt,
+		xleftmargin=.1\textwidth, 
+		xrightmargin=.1\textwidth,
+		numberstyle=\small\color{blue},
+    morekeywords={document, printf}
+}
