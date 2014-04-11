@@ -67,7 +67,7 @@ Although direct client support for SSO service is much less popular than the abo
 Finally, before starting to implement SSO, the application developer has to register the application at identity provider's service management center.  For Facebook, this is located at \url{http://developers.facebook.com/}.  This step is important, since Facebook needs to set up a secret known only to the developer and Facebook, and issue a valid application ID to the developer.  Such information are essential for correctly requesting and parsing in the SSO process.
 
 \subsection{The SSO protocols}
-
+\label{sec:bg_sso_protocol}
 All major identity providers follow one of the Single Sign-On protocol standards, the most popular of which are OAuth~\cite{OAuth2.0} (version 2.0 and 1.0a) and OpenID~\cite{openID}.  For this dissertation we are going to focus on the OAuth 2.0 protocol, which is used by Facebook SSO and Microsoft Live SSO service.  Individual IdPs may extend the protocol slightly and use different terms for credential types defined in the standard, and we highlight the workflow of Facebook's implementation of OAuth 2.0 which serves readers the best for understanding the rest of the dissertation.
 
 \subsection{Facebook OAuth 2.0 workflow}
