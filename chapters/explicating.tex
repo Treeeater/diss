@@ -57,7 +57,7 @@ The developer guide as depicted in Figure~\ref{fig:live_access_token} is valid f
 \begin{figure}[hbt]
 \centering
 \includegraphics[width=.5\textwidth]{figures/live_access_token_2}
-\caption{Documented Microsoft Live Connect authentication logic}
+\caption{Vulnerable Microsoft Live Connect authentication logic}
 \label{fig:live_access_token_2}
 \end{figure}
 
@@ -67,13 +67,147 @@ This can lead to a serious vulnerability that allows any application on the devi
 
 From one perspective, this is simply a matter of developers writing buggy apps, and the blame for the security vulnerability rests with the app developers.  We argue, though, that the purpose of the SDK is to enable average developers to produce applications that achieve desired security properties by default, and the prevalence of buggy apps created using this SDK indicates a failure of the larger engineering process.  The developer exercised reasonable prudence by using the \emph{access\_token} to query the ID service for user information and followed exactly the process described in the SDK's documentation (Figure~\ref{fig:live_access_token}).  The problem is a lack of deeper understanding of the difference between authentication and authorization, and the role of the \emph{access\_token} (i.e., why it is safe to use the \emph{access\_token} as shown in Figure~\ref{fig:live_access_token} but not in Figure~\ref{fig:live_access_token_2}).  Correct usage depends on subtle understanding of what kind of evidence each message represents and whether or not the whole message sequence establishes an effective proof for a security decision.  It is unrealistic to expect an average developer to understand these subtleties, especially without a clear guidance from the SDK.
 
-We contacted the developers of some of the vulnerable apps. A few apps have been fixed in response to our reports.  We also notified the OAuth Working Group in June 2012 about these vulnerable apps.  Dick Hardt, one of the editors of OAuth 2.0 specification (RFC 6749)~\cite{OAuth2.0}, emailed us requesting a paragraph to be included in the specification to address this issue.  We proposed the initial text and discussed with working group members.  This has resulted in Section 10.16 ``Misuse of Access Token to Impersonate Resource Owner in Implicit Flow'' being added to the specification.
+We contacted the developers of some of the vulnerable apps. A few apps have been fixed in response to our reports.  We also notified the OAuth Working Group in June 2012 about these vulnerable apps\footnote{Subsequently, we learned that John Bradley, a working group member, had posted a blog post in January 2012 about a similar issue~\cite{OAuthVulBlogPost}. The post considers the problem a vulnerability of the protocol, while we view it as a consequence of an unclear assumption about SDK usage because there are correct ways to use OAuth for service authentication}.  Dick Hardt, one of the editors of OAuth 2.0 specification (RFC 6749)~\cite{OAuth2.0}, emailed us requesting a paragraph to be included in the specification to address this issue.  We proposed the initial text and discussed with working group members.  This has resulted in Section 10.16 ``Misuse of Access Token to Impersonate Resource Owner in Implicit Flow'' being added to the specification.
 
 The key point we want to get across in this example is that security of applications constructed with an SDK depends on an understanding of the external service offered by the SDK provider, as well as subtleties in the use of tokens and assumptions about evidence used in authentication and authorization decisions.  We believe the prevalence of vulnerable apps constructed using current SDKs yield compelling evidences that a better engineering process is needed, rather than just passing the blame to overburdened developers.  This motivates us to advocate for a process that explicates SDKs by systematically identifying the underlying assumptions upon which secure usage depends.
 
 \section{The Explication Process}
 \label{sec:explicating_explication_process}
+
+In order to explicate the SDKs, we need to clearly define the desired security properties. This Chapter introduces our target scenario and threat model, and then defines the desired security properties and gives an overview about the explication process for uncovering implicit SDK assumptions.
+
+\subsection{Scenario}
+
+A typical question about security is whether some property holds for a system, even in the presence of an adversary interacting with the system in an unconstrained manner.  Such problems are often tackled by modeling a concrete target system and an \emph{abstract} adversary (i.e., a test harness in software testing terminology) that explores all interaction sequences with the concrete system.  In our scenario, however, the target system is not even concrete.  We wish to reason about all applications that can be built with the SDK following documented guidelines.  Hence, we need to consider both the application's client and server components as abstract modules.
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=.7\textwidth]{figures/system_modules}
+\caption{Parties and Components in the SSO Process}
+\label{fig:system_modules}
+\end{figure}
+
+Without mingling in the threat model, Figure~\ref{fig:system_modules} illustrates the three parties involved in an SSO process. There are three main components: application client on the left, application server on the right, and the identity provider on the bottom.  Both the client and server applications are abstract modules, and they can be further divided into three layers.  
+
+The bottommost layer represents all the client runtime, e.g. the browser or application VM.  Special attention has to be exercised when learning and modeling this layer.  These are complex modules that an outsider researcher typically does not understand in detail in the beginning of the study.  Developing a semantic model for these components involves substantial system investigation effort (as described in Section~\ref{sec:semantic_modeling}) because the seemingly clear SDK behavior running on top (even with source code available) actually depends a lot on this mysterious (and often incompletely documented) underlying runtime.  We consider the formal semantic models resulting from this study as one of the main contributions of this work.
+
+Assuming the developer always integrates the IdP-provided SDK for authentication and authorization, the middle layer consists of such SDKs, which we often have source code access to.  These are relatively easy to learn and model compared to the rest of the layers.
+
+On top of these two layers lies the application code --- FooApp\textsubscript{C} and FooApp\textsubscript{S} for client and server component respectively.  We assume that FooApp\textsubscript{C} and FooApp\textsubscript{S} do not directly interact with the service runtime except via the middle layer SDK.  Note that if the IdP receives a call from either of these components, it has no reliable way to tell if the caller is a client device or an application server.  FooApp\textsubscript{C} and FooApp\textsubscript{S} belong to the \emph{abstract but restricted} module type:  At modeling time, they do not have concrete implementations, and our goal is to reason about all possible apps built on top of the other two layers; nevertheless, the app modules do have constraints on their behaviors: we assume their developers are reasonable and therefore the modules must not violate the rules documented in the existing SDK developer guides.
+
+\subsection{Threat Model}
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=.7\textwidth]{figures/explicating_threat_model}
+\caption{Threat Model in the SSO Process}
+\label{fig:explicating_threat_model}
+\end{figure}
+
+We assume a malicious application, MalApp\textsubscript{C} shown in Figure~\ref{fig:explicating_threat_model}, may be installed and ran on the victim's device.  This can be done by either offering an incentive or masquerading as another popular benign application.  For the malicious application, its behavior is not constrained by the client SDK, therefore it is closer to be a fully abstract module, only to be limited by the functionalities provided by the client device runtime (e.g., it cannot access cookies of other domains or access restricted files).  In addition, the attacker also controls an unconstrained external machine, which we call ``Mallory''. Readers can think of Mallory as a combination of a client and server that can freely initiate communication with all the rest parties. 
+
+\subsection{Security Properties}
+\label{sec:security_properties}
+A precise understanding of the security properties that an integrated service should provide is essential for explicating the SDK: they determine which assertions should be added to the model.  We have identified several general principles of security property with respect to third-party services: 1) \emph{verification} --- a secret or signature needs to be verified before it is trusted; 2) \emph{secrecy} --- user credentials or application secrets must not be leaked through any API calls; 3) \emph{consistency} --- bindings of user data must be consistent across transactions; and 4) \emph{complete mediation} --- every access to a protected resource must be check for appropriate authorization.  
+
+Applying these principles to Facebook's SSO service, we define three important security properties: 1) \emph{authentication}
+--- the application must verify the identity and signature of submitted credentials upon consumption to ensure protection against impersonation attacks as described in the illustrative example; 2) \emph{authorization} --- OAuth tokens bearing user
+permission must stay within the session, ensuring no unsolicited permission leakage; and 3) \emph{association} --- the user identity of the application must match the identity of her associated OAuth tokens, ensuring consistencies between OAuth credentials and session identities.
+
+\subsection{The Iterative Explication Process}
+
+Explicating SDKs is a systematic investigation effort to explicitly document our knowledge about these modules and examine the knowledge against defined security goals.  Figure~\ref{fig:iterativeprocess} shows that this is an iterative process, in which we repeatedly refine our model and formally check if it is sufficient to establish the security properties or if additional assumptions are needed.  A failed check (i.e., a counterexample in the model) indicates either that our understanding of the actual systems needs to be revisited or that additional assumptions are indeed needed to ensure the desired security properties.  
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/explicationProcess.pdf}
+\caption{Iterative process to uncover security-critical assumptions}
+\label{fig:iterativeprocess}
+\end{figure}
+
+The outcome of the process is the assumptions we explicitly added to the model, as well as all other adjustments we made to the system behavior model in order to ensure all security properties.  These adjustments reflect bugs/flaws in real world systems and can be fixed based on our modifications to the model.  In Chapter~\ref{}, we show that many of the uncovered assumptions can indeed be violated in realistic situations. 
+
 \section{Semantic Modeling}
+\label{sec:semantic_modeling}
+In this chapter, we give an overview of the semantic modeling effort for the three SDKs we studied --- Facebook Connect PHP SDK, Microsoft Live Connect PHP SDK and Microsoft modern app client side SDK.  The resulting models are available at \url{https://github.com/sdk-security/}. They reflect a total of 12 person-months' effort in creating and refining the system models, however, part of this effort is spent to develop the idea of explication.  We believe this cost can get much lower as the researcher gets more experience about the explication process, or if the explication can utilize any inside information of either the IdP or the application platform provider.
+
+\subsection{Modeling language}
+
+To specify the semantics of the modules, we need to convert behaviors of the real-world system to a language that has a suitable formal analysis technology for verification.  In the first period of our investigation, we used Corral~\cite{Lal:2012:SRM:2362216.2362257}, a property checking tool that can perform bounded verification on a C program with embedded assertions.  Corral explores all possible execution paths within a bound to check if the assertions can be violated.  Later, we re-implemented all the models in Boogie~\cite{Boogie}, a language for describing proof obligations that can then be tested using an SMT solver, which allowed us to fully prove the desired properties.  This provides a higher assurance than the bounded verification done by Corral, but the basic ideas and approach are the same for both checking strategies.
+
+Based on our experience with both formal analysis tools, we recommend that future explication process starts with a bounded model checker that works directly on C-like (or other well-understood languages) syntax, does not require loop invariants to be explicitly specified, and outputs human-friendly counterexample traces.  This significantly reduces the learning curve, which gives researchers more time to focus on behavior probing and converting added assumptions to real-world vulnerabilities.  However, after more experience are gained and when the model is relatively stable, switching to a theorem prover that can perform unbounded verification ensures the security properties cannot be violated with a much higher confidence.
+
+For brevity, this section describes the Boogie version to explain our modeling.  The key Boogie language features necessary to understand this paper are:
+
+\begin{itemize}
+
+\item The * symbol represents a non-deterministic Boolean value. 
+\item HAVOC v is a statement that assigns a non-deter-ministic value to variable v.
+\item ASSERT(p) specifies an assertion that whenever the program gets to this line, p holds. 
+\item ASSUME(p) instructs Boogie to assume that p holds whenever the program gets to this line. 
+\item INVARIANT(p) specifies a loop invariant. Boogie checks if p is satisfied at the entry of the loop, and inductively prove p's validity after each iteration. 
+
+\end{itemize}
+
+If Boogie fails to prove an assertion or an invariant, it reports a counter-example. This leads us to refine the model, and adding assumptions when necessary. 
+
+\subsection{Modeling Concrete Modules}
+
+Concrete modules do not have any non-determinism. The key aspects of building semantic models for the concrete modules are summarized below.
+
+\shortsection{Data types}  The basic data types in the models are integers and several types for enumerables.  We also define \code{struct} and \code{array} over the basic types.  In the actual systems, the authentication logic is constructed using string operations such as concatenation, tokenization, equality comparison, and name/value pair parsing.  We found that most string values can be modeled into integers without losing their relevant security logic representation, except those of domain names and user names, which we canonicalize as Alice (the victim), Mallory (the adversary), foo.com (the web application developer), and etc.  It is important that we limit the data types used in the model to maintain compatibility with the theorem prover and improve performance of the model checker.
+
+\shortsection{SDKs}  The SDKs we studied are of moderate size (all under 2000 lines) and their source code are all published in the public.  They were implemented in HTML, JavaScript and PHP, so we first translate the SDKs function-by-function into the modeling language.  We do this translation manually, and although this process can likely be automated by program language tools, they lack of the functionality to abstract data structures and omit security-irrelevant details such as GUI manipulation and networking code.
+
+\lstinputlisting[caption={Example Facebook PHP SDK code},label={lst:exampleFacebookPHPSDKCode}]{listings/php_model.php}
+\lstinputlisting[caption={Example Facebook PHP SDK model},label={lst:exampleFacebookPHPSDKModel}]{listings/php_model.bgl}
+
+For example, Listing~\ref{lst:exampleFacebookPHPSDKCode},~\ref{lst:exampleFacebookPHPSDKModel} show two functions in the Facebook PHP SDK and their corresponding Boogie models. For function \code{getUserFromAvailableData}, the changes are essentially line-by-line translations with objects converted to simple data types in a straightforward fashion.  For \code{getLogoutUrl}, the PHP code performs a string operation and returns a string.  Our Boogie translation in this case is not obviously line-by-line.  For example, our procedure returns a four-element vector instead of a string.  The PHP function calls \code{getUrl} and \code{array\_merge}, which concatenate substrings, therefore, are implicitly modeled by the four-element return vector. 
+
+\shortsection{Underlying system layer}  Unlike the SDK, which is simple enough to model completely, the identity provider, client runtime, and server runtime are very complex and often do not even have source code available.  Completely modeling every detail of these systems is infeasible, but our analysis depends on developing suitable models of them.  To this end, we try to reconstruct the model by observing and probing the behavior of black-box components.  
+
+Particularly, the identity provider responds differently to different input arguments and various app settings in its web portal.  Each identity provider has a web page for app developers to tweak a number of settings, such as app ID, app secret, service website domain, and return URL.  Many of these settings are critical for the identity provider's behavior.  Further, different inputs to the provided APIs cause different responses.  Because we do not have the source code for the identity providers, we probe these behaviors by constructing different requests and app settings, and monitoring the responses using a proxy server.  For example, the Microsoft Live Connect API dialog\_permissions\_request(), RST2\_srf() and oauth20\_ authorize\_srf() models involved 11, 8 and 6 if-statements respectively, to describe different behaviors we observed in the probing process.  Similarly, for client runtime we set up different parameters to call platform APIs defined in Windows 8 modern apps SDK and observe their return values.
+
+\subsection{Modeling Abstract Modules}
+
+The abstract modules interacts with the concrete modules in a non-deterministic manner.  It includes both the benign application and adversary controlled resources.  
+
+\shortsection{Non-deterministic Calls} The key attributes of a model for an abstract module is to be able to exhibit non-deterministic behaviors.  To this end, we put the \code{HAVOC} statement, which generates a non-deterministic value inside a \code{switch} statement, with possible actions inside each \code{case} statement.  In the execution of the formal analysis tools, the symbolic values will be automatically assigned to violate any assertion if possible.  This part is not new to the model checking community, however, the situation is more complicated here as the benign application will need to be `reasonable' and follow the documented guidelines.  For example, we assume the developers never send out its app secret intentionally to the adversary.  For the guidelines, we exercise caution to read and enforce the guidelines on the switch statements.  Note that under-restriction is always better than over-restriction, as the latter will cause the symbolic execution engine to miss possible implicit assumptions. 
+
+\shortsection{Knowledge Pool}  For the adversary, its behavior is not restricted by the developer guide; however, every call it makes will be require to supply meaningful parameters.  We introduce the concept of \emph{knowledge pool}, which models the adversary's current knowledge as the test harness runs.  Different types of knowledge, such as \emph{access\_token}, \emph{Code}, and PHP session IDs, are explicitly differentiated.  An \code{AddKnowledge} function for each security-critical credential type is added as Mallory's capabilities.  Initially, the knowledge pool is populated with publicly available information, such as the benign application's app ID, as well as Mallory's own credentials to IdP and Foo application.  As the adversary makes calls, it adds all information returned by that call to its knowledge pool.  Subsequent calls non-deterministically select a set of parameters out of all applicable type in the knowledge pool.  Finally, we consider attacks that involve providing arguments of the incorrect type out of scope, e.g., giving a session ID to a function expecting an access\_token.
+
+\shortsection{Test Harness}  Finally, to put everything together and complete the test harness, we use an outside-most loop and another non-deterministic switch statement that has a limited loop count depth for Corral, and an endless loop for the Boogie theorem prover.  The loop count represents the maximum steps allowed for Corral to explore counterexamples.  For theorem prover this is unnecessary since it verifies the model based on the loop's operational semantics and manually supplied loop invariants.  Inside the switch statement, each case can be an API call from Foo application, a Mallory's move from the user's device or their back-end server.  The entire process is shown in Figure~\ref{fig:testharness}.
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=0.7\textwidth]{figures/testharness.pdf}
+\caption{Test harness workflow}
+\label{fig:testharness}
+\end{figure}
+
+\subsection{Constructing Assertions}
+This Chapter describes how we use ASSERT statements to document and test the desired security properties, covering each of the security violations described in Chapter~\ref{sec:security_properties}. 
+
+\shortsection{Authentication violation} An authentication violation occurs when an attacker acquires some knowledge that could be used to convince FooApp\textsubscript{S} that the knowledge holder is Alice.  A simple example is the case we described in Chapter~\ref{sec:explicating_illustrative_example}, in which the knowledge obtained is an \emph{access\_token}.  In addition, we also consider IdP-signed data such as Facebook's \emph{signed\_messages} or Live ID's authentication tokens.  
+
+As an example of the assertions in the model, when a Facebook \emph{signed\_messages} k is added to the knowledge pool, we assert that
+
+\fbox{\parbox[c][4em][c]{\textwidth}{
+\code{k.user_ID != \_alice \&\& k.app\_ID != \_foo\_app\_ID	\&\& TokenRecordsOnIdP[k.token].user\_ID != \_alice}
+}}
+
+where TokenRecordsOnIdP represents IdP's database storing the records of \emph{access\_token}s.
+
+\shortsection{Authorization violation} To detect authorization violations, we add ASSERT statements inside the Mallory knowledge pool.  For example, the assertion in function \code{AddKnowledge_Code} is:
+
+\fbox{\parbox[c][4em][c]{\textwidth}{ASSERT(!(c.user\_ID == \_alice \&\& c.app\_ID == \_foo\_app\_ID))}}
+
+This checks that the \emph{Code} added to the knowledge pool is not associated with Alice on FooApp, and similar assertions are added to other credential types.  The app secret is different from the above knowledge types, because it is tied to the app not the user.  Therefore, an assertion must be added that under no circumstances can an app secret be leaked to any party other than Foo and the IdP.
+
+\shortsection{Association violation} At the return point of every web API on FooApp\textsubscript{S}, we need to ensure the correct association of the user ID, the permission (represented by an \emph{access\_token} or \emph{Code}), and the session ID.  This ensures that the three key variables of the session all involve the same user.
+
 \label{sec:explicating_semantic_modeling}
+
+
 \section{Discoveries}
 \label{sec:explicating_discoveries}
