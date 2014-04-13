@@ -25,7 +25,7 @@ Various techniques have been proposed to help automatically verify certain progr
 Several works have automatically inferred program invariants or specifications.  Daikon~\cite{ErnstGKN99,Ernst2000:PhD,ErnstCGN2001:TSE} automatically learns program invariants of variables (strings, certain data structures, etc.) by instrumenting the program, running test cases, collecting and analyzing program traces.  Felmetsger et al.~\cite{Felmetsger:2010:TAD:1929820.1929834} applies Daikon to web applications to detect logic vulnerabilities.  Yang and Evans~\cite{Yang:2004:DIT:996821.996832, Yang:2006:PMT:1134285.1134325} proposed approaches to discover temporal invariants by analyzing execution traces.  Weimer et al.~\cite{Weimer05miningtemporal,LeGoues:2012:MCQ:2122269.2122550} proposed automated and generic ways to mine temporal specifications based on the assumption that certain parts of the program are more error-prone than others, such as code with poor readability or traces that raise exceptions.  Sekar~\cite{DBLP:conf:ndss:Sekar09} does approximate string comparison to infer input/output relationship between web application requests and responses to help eliminate code injection attacks.  Such inference techniques generally require a large number of execution traces, as well as that the majority of them are correct.  This assumption is not necessarily true in our problem.  
 
 \subsection{OAuth Protocol Analysis}
-Bansal et al.~\cite{6266164} modeled OAuth 2.0 protocol and verified it using ProVerif~\cite{Blanchet:2001:ECP:872752.873511}.  They also built a library for future researchers to model web APIs into ProVerif language in a easier fashion.  Pai et al.~\cite{5966531} used Alloy framework~\cite{Alloy} to verify OAuth 2.0 and discovered a previously known vulnerability.  Sun et al.~\cite{Sun:2012:DDE:2382196.2382238} discussed a number of website problems affecting OAuth’s effectiveness, such as not using HTTPS, having cross-site scripting and cross-site request forgery bugs.  The fact that both SSO services we studied are based on OAuth is mainly because of its widespread adoption, but the security issues we found concern the SDK and service implementations, rather than flaws inherent in the OAuth protocol.  
+Bansal et al.~\cite{6266164} modeled OAuth 2.0 protocol and verified it using ProVerif~\cite{Blanchet:2001:ECP:872752.873511}.  They also built a library for future researchers to model web APIs into ProVerif language in a easier fashion.  Pai et al.~\cite{5966531} used Alloy framework~\cite{Alloy} to verify OAuth 2.0 and discovered a previously known vulnerability.  Sun et al.~\cite{Sun:2012:DDE:2382196.2382238} discussed a number of website problems affecting OAuth's effectiveness, such as not using HTTPS, having cross-site scripting and cross-site request forgery bugs.  The fact that both SSO services we studied are based on OAuth is mainly because of its widespread adoption, but the security issues we found concern the SDK and service implementations, rather than flaws inherent in the OAuth protocol.  
 
 \section{An Illustrative Example}
 \label{sec:explicating_illustrative_example}
@@ -38,12 +38,12 @@ To start things from scratch, we assume the developer has no previous experience
 
 \begin{figure}[hbt]
 \centering
-\includegraphics[width=.5\textwidth]{figures/live_access_token}
+\includegraphics[width=.5\textwidth]{figures/chapter3/live_access_token}
 \caption{Documented Microsoft Live Connect authentication logic}
 \label{fig:live_access_token}
 \end{figure}
 
-In the figure, WL stands for Windows Live. A developer first needs to call \code{WL.login} defined in the JavaScript SDK. The call takes an argument value ``wl.basic'', indicating that the app will need to read the user's basic information after the function returns an \emph{access\_token} in step (2).  The \emph{access\_token} is the same as described earlier in Chapter~\ref{sec:bg_sso_protocol}.  Once the app obtains the access token, it calls another function, shown in step (3), to get the user's basic information.  The call is essentially equivalent to issuing an HTTP request to the following URL:
+In the figure, WL stands for Windows Live. A developer first needs to call \code{WL.login} defined in the JavaScript SDK. The call takes an argument value ``wl.basic'', indicating that the app will need to read the user's basic information after the function returns an \emph{access\_token} in step (2).  The \emph{access\_token} is the same as described earlier in Chapter~\ref{sec:bg_sso_protocol}.  Once the app obtains the \emph{access\_token}, it calls another function, shown in step (3), to get the user's basic information.  The call is essentially equivalent to issuing an HTTP request to the following URL:
 
 \setlength{\fboxrule}{0pt}
 \fbox{\parbox[c][4em][c]{\textwidth}{\url{https://apis.live.net/v5.0/me?access_token=ACCESS_TOKEN}} }
@@ -56,7 +56,7 @@ The developer guide as depicted in Figure~\ref{fig:live_access_token} is valid f
 
 \begin{figure}[hbt]
 \centering
-\includegraphics[width=.5\textwidth]{figures/live_access_token_2}
+\includegraphics[width=.5\textwidth]{figures/chapter3/live_access_token_2}
 \caption{Vulnerable Microsoft Live Connect authentication logic}
 \label{fig:live_access_token_2}
 \end{figure}
@@ -67,7 +67,7 @@ This can lead to a serious vulnerability that allows any application on the devi
 
 From one perspective, this is simply a matter of developers writing buggy apps, and the blame for the security vulnerability rests with the app developers.  We argue, though, that the purpose of the SDK is to enable average developers to produce applications that achieve desired security properties by default, and the prevalence of buggy apps created using this SDK indicates a failure of the larger engineering process.  The developer exercised reasonable prudence by using the \emph{access\_token} to query the ID service for user information and followed exactly the process described in the SDK's documentation (Figure~\ref{fig:live_access_token}).  The problem is a lack of deeper understanding of the difference between authentication and authorization, and the role of the \emph{access\_token} (i.e., why it is safe to use the \emph{access\_token} as shown in Figure~\ref{fig:live_access_token} but not in Figure~\ref{fig:live_access_token_2}).  Correct usage depends on subtle understanding of what kind of evidence each message represents and whether or not the whole message sequence establishes an effective proof for a security decision.  It is unrealistic to expect an average developer to understand these subtleties, especially without a clear guidance from the SDK.
 
-We contacted the developers of some of the vulnerable apps. A few apps have been fixed in response to our reports.  We also notified the OAuth Working Group in June 2012 about these vulnerable apps\footnote{Subsequently, we learned that John Bradley, a working group member, had posted a blog post in January 2012 about a similar issue~\cite{OAuthVulBlogPost}. The post considers the problem a vulnerability of the protocol, while we view it as a consequence of an unclear assumption about SDK usage because there are correct ways to use OAuth for service authentication}.  Dick Hardt, one of the editors of OAuth 2.0 specification (RFC 6749)~\cite{OAuth2.0}, emailed us requesting a paragraph to be included in the specification to address this issue.  We proposed the initial text and discussed with working group members.  This has resulted in Section 10.16 ``Misuse of Access Token to Impersonate Resource Owner in Implicit Flow'' being added to the specification.
+We contacted the developers of some of the vulnerable apps. A few apps have been fixed in response to our reports.  We also notified the OAuth Working Group in June 2012 about these vulnerable apps\footnote{Subsequently, we learned that John Bradley, a working group member, had posted a blog post in January 2012 about a similar issue~\cite{OAuthVulBlogPost}. The post considers the problem a vulnerability of the protocol, while we view it as a consequence of an unclear assumption about SDK usage because there are correct ways to use OAuth for service authentication}.  Dick Hardt, one of the editors of OAuth 2.0 specification (RFC 6749)~\cite{OAuth2.0}, emailed us requesting a paragraph to be included in the specification to address this issue.  We proposed the initial text and discussed with working group members.  This has resulted in Section 10.16 ``Misuse of \emph{access\_token} to Impersonate Resource Owner in Implicit Flow'' being added to the specification.
 
 The key point we want to get across in this example is that security of applications constructed with an SDK depends on an understanding of the external service offered by the SDK provider, as well as subtleties in the use of tokens and assumptions about evidence used in authentication and authorization decisions.  We believe the prevalence of vulnerable apps constructed using current SDKs yield compelling evidences that a better engineering process is needed, rather than just passing the blame to overburdened developers.  This motivates us to advocate for a process that explicates SDKs by systematically identifying the underlying assumptions upon which secure usage depends.
 
@@ -82,14 +82,14 @@ A typical question about security is whether some property holds for a system, e
 
 \begin{figure}[hbt]
 \centering
-\includegraphics[width=.7\textwidth]{figures/system_modules}
+\includegraphics[width=.7\textwidth]{figures/chapter3/system_modules}
 \caption{Parties and Components in the SSO Process}
 \label{fig:system_modules}
 \end{figure}
 
 Without mingling in the threat model, Figure~\ref{fig:system_modules} illustrates the three parties involved in an SSO process. There are three main components: application client on the left, application server on the right, and the identity provider on the bottom.  Both the client and server applications are abstract modules, and they can be further divided into three layers.  
 
-The bottommost layer represents all the client runtime, e.g. the browser or application VM.  Special attention has to be exercised when learning and modeling this layer.  These are complex modules that an outsider researcher typically does not understand in detail in the beginning of the study.  Developing a semantic model for these components involves substantial system investigation effort (as described in Section~\ref{sec:semantic_modeling}) because the seemingly clear SDK behavior running on top (even with source code available) actually depends a lot on this mysterious (and often incompletely documented) underlying runtime.  We consider the formal semantic models resulting from this study as one of the main contributions of this work.
+The bottommost layer represents all the client runtime, e.g. the browser or application VM.  Special attention has to be exercised when learning and modeling this layer.  These are complex modules that an outsider researcher typically does not understand in detail in the beginning of the study.  Developing a semantic model for these components involves substantial system investigation effort (as described in Section~\ref{sec:explicating_semantic_modeling}) because the seemingly clear SDK behavior running on top (even with source code available) actually depends a lot on this mysterious (and often incompletely documented) underlying runtime.  We consider the formal semantic models resulting from this study as one of the main contributions of this work.
 
 Assuming the developer always integrates the IdP-provided SDK for authentication and authorization, the middle layer consists of such SDKs, which we often have source code access to.  These are relatively easy to learn and model compared to the rest of the layers.
 
@@ -99,7 +99,7 @@ On top of these two layers lies the application code --- FooApp\textsubscript{C}
 
 \begin{figure}[hbt]
 \centering
-\includegraphics[width=.7\textwidth]{figures/explicating_threat_model}
+\includegraphics[width=.7\textwidth]{figures/chapter3/explicating_threat_model}
 \caption{Threat Model in the SSO Process}
 \label{fig:explicating_threat_model}
 \end{figure}
@@ -120,15 +120,15 @@ Explicating SDKs is a systematic investigation effort to explicitly document our
 
 \begin{figure}[hbt]
 \centering
-\includegraphics[width=0.9\textwidth]{figures/explicationProcess.pdf}
+\includegraphics[width=0.9\textwidth]{figures/chapter3/explicationProcess.pdf}
 \caption{Iterative process to uncover security-critical assumptions}
 \label{fig:iterativeprocess}
 \end{figure}
 
-The outcome of the process is the assumptions we explicitly added to the model, as well as all other adjustments we made to the system behavior model in order to ensure all security properties.  These adjustments reflect bugs/flaws in real world systems and can be fixed based on our modifications to the model.  In Chapter~\ref{}, we show that many of the uncovered assumptions can indeed be violated in realistic situations. 
+The outcome of the process is the assumptions we explicitly added to the model, as well as all other adjustments we made to the system behavior model in order to ensure all security properties.  These adjustments reflect bugs/flaws in real world systems and can be fixed based on our modifications to the model.  In Chapter~\ref{sec:explicating_discoveries}, we show that many of the uncovered assumptions can indeed be violated in realistic situations. 
 
 \section{Semantic Modeling}
-\label{sec:semantic_modeling}
+\label{sec:explicating_semantic_modeling}
 In this chapter, we give an overview of the semantic modeling effort for the three SDKs we studied --- Facebook Connect PHP SDK, Microsoft Live Connect PHP SDK and Microsoft modern app client side SDK.  The resulting models are available at \url{https://github.com/sdk-security/}. They reflect a total of 12 person-months' effort in creating and refining the system models, however, part of this effort is spent to develop the idea of explication.  We believe this cost can get much lower as the researcher gets more experience about the explication process, or if the explication can utilize any inside information of either the IdP or the application platform provider.
 
 \subsection{Modeling language}
@@ -180,12 +180,13 @@ The abstract modules interacts with the concrete modules in a non-deterministic 
 
 \begin{figure}[hbt]
 \centering
-\includegraphics[width=0.7\textwidth]{figures/testharness.pdf}
+\includegraphics[width=0.7\textwidth]{figures/chapter3/testharness.pdf}
 \caption{Test harness workflow}
 \label{fig:testharness}
 \end{figure}
 
 \subsection{Constructing Assertions}
+\label{explicating_constructing_assertions}
 This Chapter describes how we use ASSERT statements to document and test the desired security properties, covering each of the security violations described in Chapter~\ref{sec:security_properties}. 
 
 \shortsection{Authentication violation} An authentication violation occurs when an attacker acquires some knowledge that could be used to convince FooApp\textsubscript{S} that the knowledge holder is Alice.  A simple example is the case we described in Chapter~\ref{sec:explicating_illustrative_example}, in which the knowledge obtained is an \emph{access\_token}.  In addition, we also consider IdP-signed data such as Facebook's \emph{signed\_messages} or Live ID's authentication tokens.  
@@ -206,8 +207,86 @@ This checks that the \emph{Code} added to the knowledge pool is not associated w
 
 \shortsection{Association violation} At the return point of every web API on FooApp\textsubscript{S}, we need to ensure the correct association of the user ID, the permission (represented by an \emph{access\_token} or \emph{Code}), and the session ID.  This ensures that the three key variables of the session all involve the same user.
 
-\label{sec:explicating_semantic_modeling}
-
-
-\section{Discoveries}
+\section{Summary of explication discoveries}
 \label{sec:explicating_discoveries}
+
+We applied the explication process to the Facebook PHP SDK, Microsoft Live Connect SDK and Windows 8 Modern app SDK.  The Facebook PHP SDK is the only server-side SDK officially supported on Facebook developers website and is currently among the most widely used third-party SSO SDKs.  Facebook also has client SDKs for Android and iOS apps, which have many concepts similar to the PHP SDK, but we have not studied them in detail.  The Live Connect SDK is provided by Microsoft for developing metro apps that use Live ID as the identity provider.  The Windows 8 Modern app SDK is another necessary lower layer SDK to support metro apps to use OAuth-based authentication (IdP not limited to Microsoft).  
+
+\subsection{Assumptions Uncovered}
+
+The models resulting from our study formally capture what we learned about the SDKs and the systems. Our assumptions are specified in two ways: (1) all the ASSUME statements that we added; (2) when we need to assume particular program behaviors, such as a function call must always precede another, we model the behaviors accordingly, and add comment lines to state that the modeled behaviors are assumptions, rather than concrete facts.  All the assumptions are added in order to satisfy the assertions that described in Chapter~\ref{explicating_constructing_assertions}.
+
+\shortsection{Verification}  After all the assumptions were added, the models were automatically verified by Corral with the bound set to 5, meaning that the depth counter of the main loop never exceeds 5 in the test harness (Figure~\ref{fig:testharness}).  Such a depth gives a reasonable confidence that the security properties are achieved by the models and the added assumptions: the properties could only be violated by attacks consisting of six or more steps. Running on a Windows server with two 2.67GHz processors and 32GB RAM, it took 11.0 hours to check the Facebook PHP SDK, 26.3 hours to check Live Connect SDK (Both verification require Windows 8 Modern app SDK as the underlying SDK).
+
+\shortsection{Unbounded verification}  The verification being bounded is a limitation of the models built for Corral, so we subsequently re-implemented all three models in Boogie language.  As stated before, verification of Boogie models is not automatic.  It requires human effort to specify preconditions and post-conditions for procedures, as well as loop invariants.  The Boogie verifier checks that (1) every precondition is satisfied at the call site; (2) if all preconditions of the procedure are satisfied, then all the postconditions will be satisfied when the procedure returns; (3) every loop invariant holds before entering the loop, and if after an iteration it still holds.  By induction, the verified properties hold for an infinite number of iterations. Rewriting the three models in Boogie took 14 person-days of effort, including a significant portion on specifying appropriate loop invariants.  The Boogie modeling did not find any serious case missed in the Corral modeling, but provides a higher level of confidence for the verification.
+
+\input{tables/explicating_critical_assumptions}
+
+\shortsection{Mapping added assumptions to the real world}  We manually examined each assumption added to assess whether it could be violated in realistic exploits.  This effort requires thinking about how apps may be deployed and executed in real-world situations.  Table~\ref{tab:explicating_critical_assumptions} summarizes the assumptions uncovered by our study that appear to be most critical.  These assumptions can be violated in the real world, and the violations result in security compromises.  Based on our experience in communicating with SDK providers, finding realistic violating conditions is a crucial step to convincing them to treat the cases with high priority.  This step requires extensive knowledge about systems, and does not appear to be easily automated.  We describe these assumptions in more detail in Section~\ref{sec:explicating_exploit_opportunities}.  Table~\ref{tab:explicating_other_assumptions} lists some assumptions uncovered that, if violated, would also lead to security compromises.  But, unlike the assumptions in Table~\ref{tab:explicating_critical_assumptions}, we have not found compelling realistic exploits that violate these assumptions.  
+
+\input{tables/explicating_other_assumptions}
+
+\section{Exploit opportunities}
+\label{sec:explicating_exploit_opportunities}
+
+This Chapter explains how a real world attacker can exploit an application that is missing the critical assumptions in Table~\ref{tab:explicating_critical_assumptions}.  These facts show how the SDK's security assurance depends on actual system behaviors and app implementations, illustrating the importance of explicating the underlying assumptions upon which secure use of the SDK relies.  
+
+\subsection{Facebook SDK}
+
+Assumptions A1, A2, A3, and A6 listed in Table~\ref{tab:explicating_critical_assumptions} concern the Facebook PHP SDK.
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/chapter3/facebookA1.pdf}
+\caption{Facebook PHP SDK usage instructions}
+\label{fig:facebookA1}
+\end{figure}
+
+\shortsection{Assumption A1}  This assumption states that the cookie associated with Alice's client must match Alice's session ID. Figure~\ref{fig:facebookA1} is a screenshot of the usage instructions given in the README file\footnote{Taken from \url{https://github.com/facebook/facebook-php-sdk/blob/master/readme.md}} in the Facebook PHP SDK.  It seems straightforward to understand: the first code snippet calls getUser to get the authenticated user ID; the second snippet demonstrates how to make an API call to retrieve further information; and the third snippet toggles between login and logout state, so that an authenticated session will get a logoutURL and an anonymous session will get a loginURL in the response.
+
+The SDK's implementation for the getUser method is very simple. It calls the getUserFromAvailableData function shown in Listing~\ref{lst:exampleFacebookPHPSDKCode}.  There are two statements calling setPersistantData, which is to set a PHP session variable denoted as \_SESSION['user\_id'].  This action belongs to binding operations because it associates the user's identity with the session, which may affect the predicate that we define against association violations --- specifically, if Alice's user ID is assigned to the \_SESSION['user\_id'] of Mallory's session, it would allow Mallory to act on FooApp\textsubscript{S} as Alice.  Since the session ID is a cookie in the HTTP request, the assertion depends on how the client runtime handles cookies.  
+
+Normally, because of the same-origin-policy of the client, cookies attached to one domain are not attached to another. However, the policy becomes interesting when we consider a cloud-hosting scenario.  In fact, Facebook's developer portal makes it very easy to deploy the application server on Heroku, a cloud platform-as-a-service.  Each service app runs in a subdomain under herokuapp.com (e.g., FooApp\textsubscript{S}'s subdomain runs as foo.herokuapp.com).  Of course, Mallory can similarly run a service on behalf of mallory.herokuapp.com.
+
+The standard cookie policy for subdomains allows code on mallory.herokuapp.com to set a cookie for the parent domain herokuapp.com.  When the client makes a request to foo.herokuapp.com, the cookie will also be attached to the request. Therefore, if Alice's client visits the site mallory.herokuapp.com, Mallory will be able to make the client's cookie hold Mallory's session ID.  Thus, FooApp\textsubscript{S} incorrectly binds Alice's user ID to Mallory's session. 
+
+In response to our report, Facebook developed a countermeasure, which has been applied on the Heroku platform.  Instead of accepting an old session ID value in cookie, it generates a new session ID (unknown to Mallory) every time a client is authenticated.  Facebook offered us a bounty three times the normal Bug Bounty amount for reporting this issue, as well as the same award each for Assumptions A2 and A3 discussed next. 
+
+\shortsection{Assumption A2} This assumption is a case in which Corral actually discovered a valid path for violating an assertion completely unexpected to us.  The path indicated that if a PHP page on FooApp\textsubscript{S} only calls getUser (e.g., only has the first code snippet from Figure~\ref{fig:facebookA1}), Mallory is able to bind her user ID to Alice's session.  The consequence is especially damaging if the session's \emph{access\_token} is still Alice's.  Corral precisely suggested the possibility (see Table~\ref{tab:explicating_critical_assumptions}): if there is a \emph{signed\_request} containing Mallory's user ID, then the first setPersistentData call will be made, followed by a return.  The method sets \_SESSION['user\_id'] to Mallory's ID without calling getAccessToken, which would otherwise keep the \emph{access\_token} consistent with the user ID.  Therefore, the association between the user ID and the \emph{access\_token} could be incorrect. The session will operate as Mallory's account using Alice's \emph{access\_token}.  After investigating our report about this, Facebook decided to add checking code before processing the signed request to the SDK to avoid the need for this assumption.
+
+\shortsection{Assumption A3} This assumption requires that any PHP page that includes the first and fourth snippet in Figure~\ref{fig:facebookA1} must also include the second snippet in between.  This assumption is discovered when we model getAccessToken, as shown in Listing~\ref{lst:getAccessToken}.  We realized that in Facebook's authentication mechanism there are two subcategories of access token: `user' \emph{access\_token}, as described earlier in this dissertation, and `application' access token, which is provided to a web service for a number of special purposes, such as publishing instances of `secure Open Graph actions'.  In fact, the app secret can be derived solely from the application access token, so it is a serious authorization violation if Mallory can obtain it. 
+
+\lstinputlisting[caption={Facebook PHP SDK getAccessToken function},label={lst:getAccessToken}]{listings/getAccessToken.js}
+
+Method getLogoutUrl in the fourth snippet in Figure~\ref{fig:facebookA1} constructs a URL to send back to the client.  The URL contains the result of getAccessToken.  To obtain the application access token, Mallory only needs to send a request that hits a failure condition of getUserAccessToken, which prevents \code{\$this->accessToken} from being overwritten in the bold line in Listing~\ref{lst:getAccessToken}.  We confirmed that this can be done by supplying an invalid \emph{Code}in the request. 
+
+Interestingly, getAccessToken is also called by getUser in the first snippet in Figure~\ref{fig:facebookA1}.  If a PHP page includes the second snippet after the first, the supplied access token will be used to call a REST API.  When it is an application access token, the API will raise an exception, which foils the exploit.  That is why the second snippet is required before the fourth.
+
+In response to our report on this issue, Facebook modified the SDK so that getLogoutUrl now calls getUserAccessToken instead of getAccessToken, thus avoiding the need for developers to satisfy this assumption.
+
+\shortsection{Assumption A6}  This assumption requires that the user on FooApp\textsubscript{C} should not be Mallory.  Otherwise, Mallory would be able to associate its \emph{access\_token} and user id with Alice's session.  This is in fact requiring the application server to thwart any adversary performing session fixation attack by correctly implementing the cross-site request forgery defense.  Moreover, this association violation can be particularly damaging when the service app has its own credential system, and supports linking a Facebook ID to Alice’s password-protected account.  Once the linking can be done in the session, Mallory will be able to sign into Alice's account using Mallory's Facebook ID.  We confirmed that among the 21 applications displayed on Facebook showcase page, 14 service apps which violate the assumption, 6 of them support linking, and thus allowing Mallory to login as Alice in the future.  We reported this issue to Facebook, who undertook efforts of notifying app and website developers.
+
+\subsection{Microsoft Live Connect}
+
+\shortsection{Assumption A4}  The sample code given by Microsoft Live Connect documentation is essentially a program skeleton, with comment blocks for app developers to implement.  The core of the problem lies in the following function, whose implementation is empty except for a comment:
+
+\lstinputlisting[caption={Microsoft Live Connect PHP SDK saveRefreshToken function},label={lst:saveRefreshToken}]{listings/saveRefreshToken.php}
+
+This is precisely what we call a binding operation. The refresh token is the input parameter, but it is not clear where the user id comes from.  Within the scope of this function, the straightforward way to obtain this ID is from a cookie called AUTHCOOKIE, which contains the user's Live ID.  However, if the application is implemented this way, the SDK's logic is not sufficient to ensure that Alice's refresh token is always associated with her user ID.  In fact, we show that Alice's refresh token will be associated with Mallory's user ID if the attacker lures Alice (who has already logged into her Live Connect account) to visit a carefully crafted page.  This will further lead to Alice's long-lived \emph{access\_token} and \emph{authentication\_token} be exposed to Mallory.
+
+We sent this proof-of-concept exploit to Microsoft.  The team replied us and the comment in saveRefreshToken function has been revised to ``save the refresh token and associate it with the user identified by your site credential system.''  This change was also made in the ASP.NET version of the sample code.
+
+\subsection{Windows 8 Modern app SDK}
+
+\shortsection{Assumption A5}  Windows 8 Modern app SDK is used by Windows 8 app developers who wishes to integrate OAuth-based identity providers.  In the SDK, the function of interest here is authenticateAsync.  Figure~\ref{fig:authenticateAsync} illustrates the data passing through this function when the app requests an \emph{access\_token}.  The key observation is that the client does not conform to the same-origin policy, because the 302 response is in the context of https://facebook.com, while on Windows 8, an app runs in its own specialized domain, ms-appx://packageID.  Without the same-origin policy, we were unable to see why Alice's \emph{access\_token} for FooApp is guaranteed to be passed to FooApp\textsubscript{C}, not MalApp\textsubscript{C}.  To test this, we implemented a successful proof-of-concept attack to obtain Alice's \emph{access\_token}.
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=0.6\textwidth]{figures/chapter3/authenticateAsync.pdf}
+\caption{The data flow of authenticateAsync function in Modern app SDK}
+\label{fig:authenticateAsync}
+\end{figure}
+ 
+We reported this finding to Microsoft and Facebook.  Microsoft considered it ``a shortcoming of the OAuth protocol and not specific to our implementation.''.  Facebook pointed out that when authenticateAsync is called, an embedded browser window (usually called a WebView) is always prompted for Facebook password.  This lowered the severity of the attack.  We consider this a shaky security basis: if authenticateAsync allows a user to login automatically or with one click without using a password in the future, the basis will become invalid. 
+
+We investigated how SDKs on other platforms handle the data passing, and found a similar issue with the Facebook SDK for Android.  However, on Android, there is a mechanism to skip the password prompt to get the \emph{access\_token} automatically. In response to our report, Facebook is developing a fix for its Android SDK.

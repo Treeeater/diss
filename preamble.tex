@@ -7,7 +7,7 @@
 % \usepackage[noend]{algorithmic}
 % \usepackage{stmaryrd}
 \usepackage{amsmath}
-% \usepackage{multirow}
+\usepackage{multirow}
 \usepackage{listings}
 % \usepackage{color}
 % \usepackage[sort]{cite}
@@ -25,12 +25,13 @@
 % \usepackage{xspace}
 % \usepackage{multirow}
 % \usepackage{makeidx}
-% \usepackage{threeparttable}
+\usepackage{threeparttable}
 % \usepackage{booktabs}
-\usepackage{color}
-% \usepackage[usenames,dvipsnames]{xcolor}
+%\usepackage{color}
+\usepackage[usenames,dvipsnames]{xcolor}
 
 \newcommand\shortsection[1]{\vspace*{6pt}{\noindent\bf #1.}}
+\newcommand{\minitab}[2][l]{\begin{tabular}{#1}#2\end{tabular}}
 
 \newcommand{\authnote}[2]{{\textbf{$\mathbf{\big[}$~#1's note:}}
     \textbf{\em\small #2}~{$\mathbf{\big]}$}}

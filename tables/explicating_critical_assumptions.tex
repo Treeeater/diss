@@ -1,0 +1,46 @@
+\begin{table}[t]
+ \scriptsize
+ \begin{center}
+ \begin{threeparttable}
+ \begin{tabular}{|c|c|c|c|c|}
+ \hline
+  SDK & \multirow{2}{*}{Assumption} & \multirow{2}{*}{Impact when violated} & \multirow{2}{*}{Exploit opportunity} & Vendor \\
+	Name &&&&response\\
+	
+ \hline
+ \multirow{3}{*}{\minitab[c]{A1 \\ (FB)}} & In FooAppCMakesACall, assume & Mallory's session will & When the SDK is used in & Countermeasure\\
+ & FooAppC.cookie.sessionID & be associated with & subdomaining situations, & on service\\
+ & == \_aliceSession. & with Alice's user ID. & e.g., cloud domains & platform\\
+
+ \hline
+ \multirow{3}{*}{\minitab[c]{A2 \\ (FB)}} & For any PHP page, after & Alice's user ID will be & When FooApp\textsubscript{S} contains a & \multirow{3}{*}{SDK code fix}\\
+ & calling getUser, getAccessToken & associated with Mallory's & PHP page that directly & \\
+ & must be called subsequently. & returns the \emph{access\_token}. & userID & \\
+
+ \hline
+ \multirow{3}{*}{\minitab[c]{A3 \\ (FB)}} & Before getLogoutUrl returns, assume& App access token is added & When a PHP page does not & \multirow{3}{*}{SDK code fix}\\
+ & logoutURL.params.access\_token & to the knowledge pool & have the second code snippet  & \\
+ & != getApplicationAccessToken() & (owned by the adversary). & shown in the dev guide & \\
+
+ \hline
+ \multirow{3}{*}{\minitab[c]{A4 \\ (LC)}} & In saveRefreshToken on FooApp\textsubscript{S}, & Alice's refresh token will & When the term \emph{user id} in & \multirow{3}{*}{\minitab[c]{Dev guide \\ revision}}\\ 
+ & assume user\_id !=  & be associated with & the dev guide is interpreted& \\
+ & refresh\_token.user\_id & Mallory's session. & as the user's Live ID & \\
+
+ \hline
+ \multirow{3}{*}{\minitab[c]{A5 \\ (W)}} & In callAuthenticateAsyncFromMal, & Alice's access token or & When a client allows & \multirow{3}{*}{\minitab[c]{See Section\\ 5.2.3}}\\
+ & assume (app\_id == \_MalAppID & Code for FooApp is & automatic login & \\
+ & user == \_Mallory) & obtained by MalApp\textsubscript{C}. & or one-click login & \\
+
+ \hline
+ \multirow{3}{*}{\minitab[c]{A6 \\ (W)}} & Assume FooAppC always logs in & Alice's session will be& When request forgery & \multirow{3}{*}{\minitab[c]{Notifying \\ developers}}\\
+ & as Alice, i.e., the first argument & associated with Mallory's & protection for app & \\
+ &  of dialog\_oauth is \_Alice. & user ID and access token. & logon is ineffective & \\
+
+ \hline
+ \end{tabular}
+ \end{threeparttable}
+ \end{center}
+ \caption{Critical implicit assumptions uncovered using explication}
+ \label{tab:explicating_critical_assumptions}
+ \end{table}
