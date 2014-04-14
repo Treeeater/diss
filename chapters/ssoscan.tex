@@ -7,7 +7,7 @@ To better understand and mitigate these risks, we present our design and impleme
 
 SSOScan prototype focuses on Facebook as the identity provider, but our approach is generic and could be applied to check other identity providers as well.  It takes a website URL as input, determines if that site uses Facebook SSO, and automatically signs into the site using Facebook test accounts and completes the registration process when necessary.  Then, SSOScan simulates several attacks on the site while observing the responses and monitoring network traffic to automatically determine if the application is vulnerable to any of the tested vulnerabilities.  In addition to Single Sign-On services, many of the automation heuristics and techniques could also be adapted to scan for vulnerabilities in integrating other security-critical services such as online payments and file sharing APIs.
 
-For the rest of this Chapter, we first show in Chapter~\ref{sec:ssoscan_manual_example} the human effort involved in manually checking an example application for the assumption IE vulnerability status mentioned in Chapter~\ref{sec:explicating_illustrative_example}.  This gives readers a general idea of what actions SSOScan needs to automate.  Then, we discuss some closely related works in this field in Chapter~\ref{sec:ssoscan_related_work}.  In Chapter~\ref{sec:ssoscan_design} we explain the design and implementation of SSOScan, and present the large-scale study results we obtained by using SSOScan to check the top 20,000-ranked websites according to Quantcast in Chapter~\ref{sec:ssoscan_study}.  Our exploration experiments and results to improve SSOScan's speed and automation success rate are given in Chapter~\ref{sec:ssoscan_heuristics}.  Finally, we discuss the vendor responses we got and possible deployment scenarios for SSOScan in Chapter~\ref{sec:ssoscan_deployment}.
+For the rest of this Chapter, we first show in Chapter~\ref{sec:ssoscan_manual_example} the human effort involved in manually checking an example application for the assumption IE vulnerability status mentioned in Chapter~\ref{sec:explicating_illustrative_example}.  This gives readers a general idea of what actions SSOScan needs to automate.  Then, we discuss some closely related works in this field in Chapter~\ref{sec:ssoscan_related_work}, and the vulnerabilities SSOScan aims to detect in Chapter~\ref{sec:ssoscan_vuls}.  In Chapter~\ref{sec:ssoscan_design} we explain the design and implementation of SSOScan, and present the large-scale study results we obtained by using SSOScan to check the top 20,000-ranked websites according to Quantcast in Chapter~\ref{sec:ssoscan_study}.  Our exploration experiments and results to improve SSOScan's speed and automation success rate are given in Chapter~\ref{sec:ssoscan_heuristics}.  Finally, we discuss the vendor responses we got and possible deployment scenarios for SSOScan in Chapter~\ref{sec:ssoscan_deployment}.
 
 \section{A manual scanning example}
 \label{sec:ssoscan_manual_example}
@@ -93,13 +93,89 @@ To reduce developer effort, Pirolli et al.~\cite{Pirolli:2002:UAM:1556262.155627
 
 Integuard~\cite{Integuard} and AuthScan~\cite{AuthScan} have similar goals with SSOScan.  Integuard infers invariants across requests and responses and uses them to perform intrusion detection on future activities.  AuthScan~\cite{AuthScan} is an automated tool to extract specifications from SSO implementations by using both static program analysis and dynamic behavior probing.  Our goals differ in that we focus on detecting specific vulnerabilities rather than generic ones.  This enables us to establish clear automation goals and build well-defined state machines for the scanner, and removes the uncertainties the previous works incur when inferring invariants or modeling unknown functions.  The drawback is our approach relies on knowledge of particular vulnerabilities.  For many integrated web services, including SSO, many vulnerabilities are known or can be obtained using systematic explication as described in Chapter~\ref{sec:explication}.
 
+\section{Targeted Vulnerabilities}
+\label{sec:ssoscan_vuls}
+
+In addition to the \emph{access\_token} vulnerability discussed in Chapter~\ref{sec:ssoscan_manual_example}, SSOScan aims to scan for three other vulnerabilities.  The four vulnerabilities can be categorized into two general types.
+
+\shortsection{Credential Misuse}  If an application uses \emph{access\_token} to authenticate users, we classify the application as misusing credentials.  However, sometimes even the developers chose the correct OAuth credentials to use, their application still ends up with a vulnerable implementation.  One way this happens is when information decoded from a \emph{signed\_request} is used but the signature is never checked using the \emph{app\_secret}.  The attack to exploit this vulnerability is similar to the \emph{access\_token} simulated attack, except that Mallory needs to replace the \emph{signed\_request} in addition to \emph{access\_token}.
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=\textwidth]{figures/chapter4/ssoscan_vuls_leakage}
+\caption{OAuth \emph{Code} leaked through the Referer header}
+\label{fig:ssoscan_vuls_leakage}
+\end{figure}
+
+\shortsection{Credential Leakage}  The OAuth credentials can be accidentally leaked to a potentially malicious third-party, if the application developer does not pay attention.  When the Facebook OAuth landing page contains third-party content, requests to retrieve those contents will automatically include OAuth credentials in the \code{Referer} header, which leaks them to the third-party.  In addition, credentials can be exfiltrated by third-party scripts if they are present in the page content.  If a malicious party is able to obtain these credentials, it could carry out impersonation attacks or perform malicious actions using permissions the user granted the original application, such as posting on user's timeline or accessing sensitive information.
+
 \section{Design and Implementation}
 \label{sec:ssoscan_design}
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=\textwidth]{figures/chapter4/ssoscan_overview}
+\caption{SSOScan components overview}
+\label{fig:ssoscan_overview}
+\end{figure}
+
+SSOScan consists of two main parts: the Enroller and the Vulnerability Tester, as shown in Figure~\ref{fig:ssoscan_overview}.  Ovals represent testing states, curved rectangles represent different modules in our tool, and diamonds represent control flow decisions.  
+
+Left of Figure~\ref{fig:ssoscan_overview} describes the workflow of the Enroller.  The Enroller automatically registers two test accounts at target web application using Facebook SSO login.  Given a target web application \emph{A}, our tool first removes all cookies from the browser and navigate to \emph{A}.  A short delay after the page has fired its \code{onload} event, the SSO button finder (Section~\ref{sec:ssoscan_design_bf}) analyzes the DOM and outputs the most likely candidate elements for SSO button.  The Enroller then simulates clicks on those elements, monitoring traffic to listen for the Facebook SSO traffic pattern.
+
+When traffic to Facebook SSO entry point is captured, SSOScan automatically logs into Facebook and grants the requested permissions to the application.  OAuth credentials returned from Facebook are stored for future use.  An important and challenging step after the SSO process is to automatically complete the registration form when applicable.  SSOScan combines heuristics with random inputs to fill in forms (Section~\ref{sec:ssoscan_design_cr}) and locate and click the submit button.  Should this process fail, the Enroller would try again using a different option (Section~\ref{sec:ssoscan_heuristics_options}) and repeats the process until success or giving up after trying all available options.  
+
+After successfully enrolling both test accounts at target application, the Vulnerability Tester (Chapter~\ref{sec:ssoscan_design_vt}) performs simulated attacks on the application and monitors the traffic and its behavior to determine vulnerability status.  An identity oracle (Chapter~\ref{sec:ssoscan_design_oracle}) is necessary for both the Enroller and the Vulnerability Tester due to different purposes.
+
+\subsection{SSO Button Finder}
+\label{sec:ssoscan_design_bf}
+
+Using Figure~\ref{fig:ssoscan_espn_login_button} as an example, the SSO button finder needs to locate the upper-right corner for `sign in' and then the `login with Facebook' button in the middle of the page.  To automate this, SSOScan first extracts a list of qualifying elements from all nodes in an HTML page, and then extracts content strings from such elements.  The Button Finder relies on the assumption that developers put one of a small pre-defined set of expected strings in the text content or attributes of the SSO button, and our evaluation results (Section~\ref{sec:ssoscan_study}) confirm that this assumption is nearly always valid.  SSOScan computes a score for each element by matching its content with regular expressions such as \code{[Ll][Oo][Gg][IiOo][Nn]} which indicates its resemblance to ``login''.  SSOScan forms a candidate pool consisting of the top-scoring elements and triggers clicks on them.  This process can be illustrated using Figure~\ref{fig:ssoscan_design_button_finder}.  We defer the details such as the heuristic choices SSOScan uses to filter elements and compute scores to Section~\ref{sec:ssoscan_heuristics}.
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=0.7\textwidth]{figures/chapter4/ssoscan_design_button_finder}
+\caption{SSO Button Finder workflow}
+\label{fig:ssoscan_design_button_finder}
+\end{figure}
+
+Once the login button has been found and the traffic to Facebook's OAuth endpoint has been captured, automating logging into Facebook is straightforward.  Upon detection of Facebook login DOM structure, we automatically fill in the username/password field using test account information.  SSOScan also grants all requested permissions to the application to facilitate registration.
+
+\subsection{Completing Registration}
+\label{sec:ssoscan_design_cr}
+
+The required interactions to complete the registration process after single sign-on vary significantly across web applications.  They range from simply clicking a submit button (e.g., Figure~\ref{fig:ssoscan_espn_register}, in which all input fields are pre-populated using information taken from the SSO process), to very complicated registration processes that involve interactively filling in multiple forms and possibly CAPTCHA solving.
+
+SSOScan attempts to complete all forms on the SSO landing page by leaving pre-populated fields untouched and processing the remaining inputs in the order of radios, selects, checkboxes and finally text inputs.  We found this ordering to be very important to achieve higher automation success, as some forms may dynamically change what needs to be filled upon selecting different radio or select elements.  Processing these elements first allows SSOScan to rescan for dynamically generated fields and process them accordingly.  
+
+For radio and select elements, SSOScan randomly chooses an option; for checkboxes, it simply checks all of them.  For text inputs, SSOScan tries to infer their requirements using heuristics and provide satisfactory mock values.  Once all the inputs have been filled, the next step is to reuse the SSO Button Finder with different regular expressions and settings specifically designed to find submit buttons.  After SSOScan attempts to click on a submit button candidate, it refers to the oracle~\ref{sec:ssoscan_design_oracle} to determine if the entire registration process is successful.
+
 \subsection{Oracle}
 \label{sec:ssoscan_design_oracle}
+
+The Oracle analyzes the application and determines whether it is in an authenticated state, and if so, further identifies the session identity.  This module is necessary for SSOScan to decide if a registration attempt is successful.  It is also used by the Vulnerability Tester to determine if a simulated impersonation attack succeeds.
+
+The key observation behind the Oracle is that web applications normally remove the original login button and display some identifying information about the user in an authenticated session.  For example, after a successful registration many websites display a welcome message that includes the user's first name (Figure~\ref{fig:ssoscan_espn_oracle}).  Therefore, the Oracle works by searching the entire DOM and \code{document.cookie} for test account user information (e.g., names, email, or profile images) after the page has finished loading.
+
+\subsection{Vulnerability Tester}
+\label{sec:ssoscan_design_vt}
+
+After the Enroller successfully registers two test accounts, control is passed to the Vulnerability Tester which checks the target application for the vulnerabilities described in Section~\ref{sec:ssoscan_vuls}.  We use two different probing approaches to cover the five tested vulnerabilities: \emph{simulated attacks} and \emph{passive monitoring}.
+
+\shortsection{Simulated Attacks} The two credential misuse vulnerabilities are tested using simulated impersonation attacks.  We have already outlined the steps to manually carry out such attacks in Chapter~\ref{sec:ssoscan_manual_example}.  To automate it, SSOScan simply invokes existing components to complete logins.  The only difference is that SSOScan will replace the OAuth credentials in Facebook's response with those previously obtained from Alice.
+
+The attack is successful if Bob is able to login as Alice using the replaced credential.  The Vulnerability Tester deems the site vulnerable if the Oracle determines that Alice is the logged in user after the simulated attack.
+
+\shortsection{Passive Monitoring}  The credential leakage vulnerabilities are detected using passive approaches.  For brevity, we only explain how leaks through the \code{Referer} header are detected; the other leaks are detected similarly by observing network traffic and web page contents.
+
+To check if an application leaks the user's OAuth credentials through the \code{Referer} header, SSOScan monitors all request data during the account registration process and compares each \code{Referer} header to OAuth credentials recorded in earlier stages.  If a match is found, SSOScan then checks if the requesting page contains any third-party content such as scripts, images, or other elements that may generate an HTTP request.  SSOScan reports a potential leakage when credentials are found in the \code{Referer} header for a page that also contains third-party content.
+
 \section{Large-scale Study}
 \label{sec:ssoscan_study}
 \section{Heuristics Evaluation}
 \label{sec:ssoscan_heuristics}
+\subsection{SSOScan Options}
+\label{sec:ssoscan_heuristics_options}
+
 \section{Vendor Response and Deployment}
 \label{sec:ssoscan_deployment}
