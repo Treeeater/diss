@@ -30,9 +30,9 @@ Playing as both the victim and the perpetrator, these steps are essentially what
 \label{fig:ssoscan_espn_login_button}
 \end{figure}
 
-\item \textbf{Clicking ``login through SSO'' button(s).}  In step (0.2) and (1), we need to click the correct button(s) to initiate the SSO process.  For ESPN.com, this is to click the `sign in' butotn in the upper-right corner, and then the `login with Facebook' button in the popup layer , as shown in Figure~\ref{fig:ssoscan_espn_login_button}.
+\item \textbf{Clicking ``login through SSO'' button(s).}  In step (0.2) and (1), we need to click the correct button(s) to initiate the SSO process.  For ESPN.com, this is to click the `sign in' button in the upper-right corner, and then the `login with Facebook' button in the pop-up layer , as shown in Figure~\ref{fig:ssoscan_espn_login_button}.
 
-\begin{figure}[hbt]
+\begin{figure}[bht]
 \centering
 \includegraphics[width=.5\textwidth]{figures/chapter4/ssoscan_espn_facebook_login}
 \caption{Typical Facebook login form}
@@ -50,7 +50,7 @@ Playing as both the victim and the perpetrator, these steps are essentially what
 
 \item \textbf{Fill in registration forms if necessary.}  In step (0.2) and (1), after the SSO process has completed, we need to fill in additional registration forms if the application so asks.  Certain user information may have already been pre-populated from the test account Facebook profile, as is shown here in Figure~\ref{fig:ssoscan_espn_register}.  For ESPN.com, we simply need to click `finish' button to complete the registration process.
 
-\begin{figure}[hbt]
+\begin{figure}[bht]
 \centering
 \includegraphics[width=.8\textwidth]{figures/chapter4/ssoscan_espn_fiddler}
 \caption{Using Fiddler proxy to tamper \emph{access\_token}}
@@ -74,8 +74,29 @@ For all the above steps, the first two is necessary to only perform once for all
 
 \section{Related Work}
 \label{sec:ssoscan_related_work}
+
+Our work builds on extensive previous work on automatically testing applications for vulnerabilities.  We briefly describe relevant approaches next, as well as previous works that analyze vulnerabilities in SSO services.
+
+\shortsection{Program analysis} Program analysis techniques such as static analysis~\cite{Ball:2002:SLP:503272.503274} and dynamic analysis including symbolic execution~\cite{Cadar:2005:EGT:2156342.2156345,Kudzu} automatically identify vulnerabilities with fast testing speed and good code coverage.  Runtime instrumentation techniques such as taint tracking~\cite{Nentwich07cross-sitescripting} and inference~\cite{DBLP:conf:ndss:Sekar09} also help to safeguard sensitive source-sink pairs.  However, these techniques require white-box access to the application (at least at the level of its binary), which is not available for remote web application testing.  Automated web application testing tools that work on the server implementation~\cite{1167787,Ricca:2001:ATW:381473.381476,Alshahwan:2011:AWA:2190078.2190141} do not apply to large-scale vulnerability testing well.  They either require access to application source code or other specific details such as UML or application states.  For our purposes, the test target (application server implementation) is only available as a black box.
+
+\shortsection{Oracle-based security testing} Penetration testing is widely used to check applications for vulnerabilities~\cite{whitehat,redspin}.  The tester analyzes the system and performs simulated attacks on it, often requiring substantial manual effort.  More automated testing requires an oracle to determine whether or not a test failed.  Sprenkle et al.\ developed a difference metric by comparing two webpages based on DOM structure and n-grams~\cite{Sprenkle:2005:ARF:1101908.1101947} and improved results using machine learning techniques~\cite{Sprenkle07learningeffective}.  SSOScan also requires an oracle (Chapter~\ref{sec:ssoscan_design_oracle}) to determine session identity. For our purposes, a targeted oracle works better than their generic approach.
+
+\shortsection{Automated GUI testing} SSOScan is also closely related to automated GUI testing.  The GUI element triggering approach we take shares some similarities with recent works to simulate random user interactions on GUI element to explore application execution space on Android system~\cite{Rastogi:2013:AAS:2435349.2435379}, native Windows applications~\cite{Xie:2006:MTC:1172962.1172990}, and web applications~\cite{Benedikt02veriweb:automatically,Huang:2003:WAS:775152.775174}.  Their common goal is to explore app execution space efficiently to discover buggy, abnormal or malicious behavior.  By contrast, our goal is to drive the application through a particular SSO process rather than explore its execution space.  Further, we need the tests to proceed fast enough for large-scale evaluation.  Since each simulated user interaction with the web application involves round-trip traffic and a non-trivial delay to get the response, our primary focus is to develop useful heuristics to quickly prune search space before triggering any user interactions.
+
+SmartDroid~\cite{Zheng:2012:SAS:2381934.2381950} and AppIntent~\cite{Yang:2013:AAS:2541806.2516676} both aim to recover sequences of UI events required to reach a particular program state or follow an execution path obtained from static analysis.  These approaches target Android applications and rely on client-side information that is not available for our web application scanning tool, where the necessary state only exists on the (inaccessible) server side.
+
+\shortsection{Human cooperative testing} Off-the-shelf testing tools like Selenium~\cite{Selenium} and TestingBot~\cite{TestingBot} can be used to discover bugs in web applications under developers' assistance.  These tools replay user interactions based on testing scripts that are manually created by the application developer.  BugBuster~\cite{BugBuster} offers some automatic web application exploration capabilities, but still does not understand the application context enough to perform any non-trivial actions such as those involving authentication and business logic.
+
+To reduce developer effort, Pirolli et al.~\cite{Pirolli:2002:UAM:1556262.1556272}, Elbaum et al.~\cite{Elbaum:2003:IWA:776816.776823}, and the Zaddach tool~\cite{zaddach:ndss14} show promising results by collecting interactions from normal users and replaying them to learn application states and invariants for vulnerability scanning.  These works do not require extra manual effort from developers to write testing script or specify user interactions.  However, one potential problem these works fail to address is user's privacy concerns when submitting every interaction.  This could be especially sensitive when the actions involve passwords or payments.  SSOScan avoids this problem and is complementary to this line of work --- in most cases, SSOScan attempts to scan applications in a fully automatic fashion and does not require traces from any party.  When SSOScan fails, traces submitted from the users may guide SSOScan to complete the scan.
+
+\shortsection{SSO security} We have already covered some works on SSO-related security analysis in Chapter~\ref{sec:explicating_prior_works}, however, we want to point out two additional closely related works in SSO application scanning.
+
+Integuard~\cite{Integuard} and AuthScan~\cite{AuthScan} have similar goals with SSOScan.  Integuard infers invariants across requests and responses and uses them to perform intrusion detection on future activities.  AuthScan~\cite{AuthScan} is an automated tool to extract specifications from SSO implementations by using both static program analysis and dynamic behavior probing.  Our goals differ in that we focus on detecting specific vulnerabilities rather than generic ones.  This enables us to establish clear automation goals and build well-defined state machines for the scanner, and removes the uncertainties the previous works incur when inferring invariants or modeling unknown functions.  The drawback is our approach relies on knowledge of particular vulnerabilities.  For many integrated web services, including SSO, many vulnerabilities are known or can be obtained using systematic explication as described in Chapter~\ref{sec:explication}.
+
 \section{Design and Implementation}
 \label{sec:ssoscan_design}
+\subsection{Oracle}
+\label{sec:ssoscan_design_oracle}
 \section{Large-scale Study}
 \label{sec:ssoscan_study}
 \section{Heuristics Evaluation}
