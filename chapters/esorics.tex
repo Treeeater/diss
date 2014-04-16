@@ -1,2 +1,20 @@
 \chapter{Restricting Untrusted Third-Party Code}
 \label{sec:esorics}
+
+In contrast to the last two chapters, we consider the scenario where the third-party service provider is not trusted to perform any security-critical actions on the application in this chapter.  For example, the services of interest include web analytics and tracking scripts, online advertising and social widgets, as described in Chapter~\ref{sec:bg_mashup_apps}.  Nikiforakis et al. showed that many popular sites include several third-party scripts per page and the trend is increasing~\cite{Nikiforakis:2012:YYI:2382196.2382274}.  Although such services are widely embedded in both web and mobile applications, we focus on web applications only in this dissertation.  
+
+\shortsection{Threat model}  We extend the threat model described in Chapter~\ref{sec:bg_mashup_apps} in more details here: the adversary controls one or more of the scripts embedded in the target page.  To obtain private content, that adversary's script may use any means provided by JavaScript to get the text or attribute of a confidential node, or by probing values of variables in host scripts.  We do not target (i.e. restrict) JavaScript frameworks such as jQuery that require rich, bi-direct\-ion\-al interactions with the host's content.  In these cases, we assume the developers fully trust the third party libraries.  We also do not consider other attack vectors such as XSS attacks or web browser vulnerabilities.  Many other projects have focused on mitigating these risks, and we concentrate on the scenario where the host page developer deliberately includes untrusted scripts.
+
+Our goal under this threat model is different from the previous chapter: we aim to protect web content from embedded third party scripts based on fine-grained DOM content access control.  Our solution also isolates third-party script execution contexts, preventing any undesired interactions by third party scripts and host scripts.  These mechanisms significantly limit the damage a malicious third party script can do.  We assume a one-way trust model since our goal is to protect user content from untrusted scripts rather than to protect embedded scripts from the host page or each other.  In summary, our goal is to provide third party scripts with limited access to the DOM and no access to host scripts, while granting host scripts full access to third party scripts and the DOM.  We realize these goals by building a browser that enforces fine-grained policies and providing an automatic policy generator tool to help site administrators generate these policies.  
+
+\section{Security Policy}
+\label{sec:esorics_policy}
+
+\section{Automatic Policy Generation}
+\label{sec:esorics_APG}
+
+\section{Implementation}
+\label{sec:esorics_impl}
+
+\section{System Evaluation}
+\label{sec:esorics_evaluation}
