@@ -7,11 +7,92 @@ In contrast to the last two chapters, we consider the scenario where the third-p
 
 Our goal under this threat model is different from the previous chapter: we aim to protect web content from embedded third party scripts based on fine-grained DOM content access control.  Our solution also isolates third-party script execution contexts, preventing any undesired interactions by third party scripts and host scripts.  These mechanisms significantly limit the damage a malicious third party script can do.  We assume a one-way trust model since our goal is to protect user content from untrusted scripts rather than to protect embedded scripts from the host page or each other.  In summary, our goal is to provide third party scripts with limited access to the DOM and no access to host scripts, while granting host scripts full access to third party scripts and the DOM.  We realize these goals by building a browser that enforces fine-grained policies and providing an automatic policy generator tool to help site administrators generate these policies.  
 
+\section{Prior Works}
+\label{sec:esorics_related_works}
+
 \section{Security Policy}
 \label{sec:esorics_policy}
 
+Our protection policies are separated into two categories: JavaScript execution isolation as explained in Chapter~\ref{sec:esorics_policy_iso}, and DOM access control as explained in Chapter~\ref{sec:esorics_policy_dom}.
+
+\subsection{Execution Isolation} 
+\label{sec:esorics_policy_iso}
+One of our primary goals is to let the web developers easily group third party scripts so that some of them may collaborate with each other while still remaining separated from other third party scripts and host page scripts.  To facilitate this we add a new attribute to the script tag: \code{worldID=}\emph{string}.  This idea originates from Barth et al.'s \emph{isolated world} concept~\cite{extension} which was developed to isolate browser extensions.  Each world with a unique \code{worldID} is isolated from all other worlds.  The \code{worldID} attribute also serves as the principal for scripts for controlling access to DOM nodes (discussed in Section~\ref{sec:esorics_policy_dom}).
+\lstset{xleftmargin=.25\textwidth,xrightmargin=.1\textwidth}
+\lstinputlisting[caption={Policy for execution context separation},label={lst:esorics_policy_iso}]{listings/esorics_policy_iso.js}
+
+Listing~\ref{lst:esorics_policy_iso} illustrates the semantics of the \code{worldID} attribute.  The custom and native objects of the first script (in \code{worldID="1"}) are isolated from the second script because they have different \code{worldID}s.  This means the variable \code{a}, defined in the first script, is not visible in the second script, and the second script only sees the original \code{toString} method.  Since the third script has \code{worldID="1"}, it executes within the same context as the first script and can access all the objects the first script can.  
+
+\shortsection{Shared Libraries} Full isolation of embedded scripts would break the functionality of many host pages.  In some scenarios, the developers still want to access certain APIs provided by third-party scripts without providing reciprocal accesses.  We added two new attributes to script tags: \code{sharedLibId} and \code{useLibId}.  All objects inside a script tagged with a \code{sharedLibId} attribute can be accessed by the host execution context as well as all other worlds that have the corresponding \code{useLibId} attribute.  On the other hand the third party scripts themselves cannot access the privileged scripts and are still bound by the DOM access policies.  For example, \emph{Google Analytics} users can use the custom variable \code{_gaq} to track business transactions: the user pushes transaction information into the array \code{_gaq} which is later processed by Google Analytics, e.g. \code{_gaq.push(['_addTrans', '1234','11.99']);}.  If the two execution contexts are completely isolated, the \code{_gaq} variable would not normally be visible in other worlds.  To support this, the \code{sharedLibId} attribute is defined to identify when an embedded script is a shared library:
+
+\lstset{xleftmargin=.1\textwidth,xrightmargin=.1\textwidth}
+\begin{lstlisting}
+     <script src="google.com/GA.js" worldID="1" SharedLibId="GA">
+\end{lstlisting}
+Then, other third-party scripts can use the \code{useLibId} attribute to access objects defined in the shared library.  To prevent pollution of other script objects, objects in the shared library are prefixed with the library identifier.  For example, to access the variable \code{_gaq}, developer needs to append \code{GA} in the prototype chain.
+
+\begin{lstlisting}
+     <script useLibId = "GA">
+        GA._gaq.push(['_addTrans', '1234', '11.99']);
+     </script>
+\end{lstlisting}
+
+Note that as pointed out by Barth et al.~\cite{Finifter_preventingcapability,COL}, leaking a seemingly trivial function reference to a malicious script may pose greater risks if the function is not carefully examined, and could lead to arbitrary code execution in the host context, therefore compromise the entire sandbox mechanism.  Here we assume all the references given to untrusted scripts are safe, and leave this securing duty to the developers.  We consider vulnerabilities introduced when leaking insecure object references out of the scope of this dissertation.
+
+\subsection{DOM Node Access Control} 
+\label{sec:esorics_policy_dom}
+
+\lstset{xleftmargin=.2\textwidth,xrightmargin=.2\textwidth}
+\lstinputlisting[caption={Policy for DOM access mediation},label={lst:esorics_policy_dom}]{listings/esorics_policy_dom.js}
+
+In addition to isolating objects in scripts, we provide fine-grained access control over host objects in the form of DOM nodes.   We introduce two additional tags for all nodes in the DOM tree: \code{RACL} for specifying read access, and \code{WACL} for specifying write access.  Each access control list is a comma-separated list of \code{worldID}s.  Only scripts running in the worlds listed in the \code{RACL} list are permitted to read the node, and only scripts listed in \code{WACL} are permitted to modify the node.  For example, if a third-party script wants to remove a node, it must have the privileges of modifying both that node and its parent (this is consistent with the JavaScript syntax for removing a node which requires two node handles: \code{parentNode.removeChild(thisNode)}).  On the other hand, to append a node to an existing node, a script needs to have write privileges for the parent node and read privilege to the node to be inserted.  The access control list of a node does not depend on its parent or children.  
+
+As shown in Listing~\ref{lst:esorics_policy_dom}, a script can only access a particular \code{div} element if it is present in the corresponding access control list of that element.  Our policy is more fine-grained and flexible than previous works like Adjail~\cite{Adjail} and MashupOS~\cite{MashupOS} (policy based on tree structure).  Particularly, our policy allows developers to create a public-accessible node deep down a DOM tree branch where all its ancestors are protected (host embedding an advertisement under such node could prefer this configuration), or to set that node as the only protected member while all the rest are public (Only that node contains private information, and the host wants to protect it).  Table~\ref{tab:Policies} summarizes the customizable policies for providing fine-grained mediation of host objects together with the control of sharing and isolation of custom and native objects.
+
+\begin{table}[bth]
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+ Context & Policy syntax & Semantics \\
+\hline
+ script&{\code{worldID=``}$s$''}&WorldID of the script context is $s$\\
+\hline
+ script&{\code{sharedLibId=``}$s$''}&This is script from $s$ library \\
+\hline
+ script&{\code{useLibId=``}$s$''}&This script requires to use $s$ library\\
+\hline
+ DOM node&{\code{RACL=``}$d_1,d_2,\dots$''}&Worlds that may access this \\
+\hline
+ DOM node&{\code{WACL=``}$d_1,d_2,\dots$''}&Worlds that may modify this \\
+\hline
+\end{tabular}
+\caption{Summary of Policy Attributes}\label{tab:Policies}
+\end{center}
+\end{table}
+
+\shortsection{Special API Properties}  In addition to specific DOM nodes, we also provide developers with policy options to hide selected APIs from certain scripts.  These special host objects may provide scripts with powerful capabilities or private information.  For example, \code{document.cookie} returns authentication tokens that an untrusted script might exploit.  The defense mentioned above cannot prevent this because \code{cookie} is a special property of the \code{document} and is therefore not tied with any specific node.  There are many other powerful APIs such as \code{document.write()} and \code{document.open()}.  Therefore we add a set of new attributes for the \code{<html>} tag to allow the developer to specify these per-API/per-script policies, other examples include \code{document.location}, \code{document.URL} and \code{document.title}, etc.  These privileges are disallowed for untrusted scripts unless explicitly annotated.
+
 \section{Automatic Policy Generation}
 \label{sec:esorics_APG}
+
+In the last chapter, we described the fine-grained policies of our modified browser supports.  We envision that a common policy that applies to any web application is to specify a list of private DOM nodes and protect them from untrusted scripts' access.  This could be done by web application developers manually annotating nodes as public or private.  Manual annotation, however, is probably too tedious for most web applications and unlikely to happen until a protection system is widely deployed.  Hence, we develop a technique for automatically identifying nodes that contain private content.  If we had access to the server, one strategy would be to use information flow techniques at the server to track private content and mark nodes containing private content when they are output.  Since we do not assume server access, however, here we consider a dynamic technique for inferring private content solely based on the pages returned from different requests.  
+
+We define private content as content that depends on the user's credentials.  Thus, any content that is different in an authenticated session from what would be retrieved for the same request in an unauthenticated session is deemed private.  Nodes that directly contain private information should be marked private, but not the parent of that node.  For example, if \code{<div><span>Username</span></div>} appears, only the inner \code{span} element is private, but not the outer \code{div}.  The fine-grained nature of our policy enforcement supports this definition well.  Automation is done by submitting multiple requests to the server with different credentials, and identifying the differences.
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=0.7\textwidth]{figures/chapter5/esorics_policy_generator.pdf}
+\caption{Automatic Policy Generator Workflow}
+\label{fig:esorics_policy_generator}
+\end{figure}
+
+One of our design goals is to minimize the changes have to be made both on server side and on client side, so we use a proxy server to add security policies.  Figure~\ref{fig:esorics_policy_generator} provides an overview of our policy learner structure.  Proxy server automatically identifies third-party scripts and generates the policies for the response when a request is captured, which is passed on to browser client to enforces them.
+
+We use the Squid proxy server as our mediating proxy.  It supports ICAP (Internet Content Adaptation Protocol), which allows us to modify web traffic on the fly.  For convenience, we run the Squid server in the same machine as our modified browser, however one can definitely move that onto an intermediary node along the routing path for better centralized control.  We use GreasySpoon~\cite{GreasySpoon} for the ICAP server implementation.
+
+This design cannot deal with SSL web traffic since the proxy will not be able to see the decrypted traffic.  The Chromium development group is currently (as of April 2014) still working to implement \keyword{webRequest} and \keyword{webNavigation} as extension APIs~\cite{webRequest}.  Once these are implemented, we can move our proxy server inside the browser thus making it work on SSL/TLS traffic and easing deployment.  
+  
+The content adaptation is divided into two main functions: third-party script identification and public node marking.
 
 \section{Implementation}
 \label{sec:esorics_impl}
