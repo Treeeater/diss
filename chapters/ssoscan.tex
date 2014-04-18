@@ -217,24 +217,7 @@ As shown in Figure~\ref{fig:ssoscan_study_percentile} (b) and (c), the vulnerabi
 
 \shortsection{Front-end Integration} There are three basic client-side methods to integrate Facebook SSO: a JavaScript SDK, a pre-configured widget, or a custom implementation.  (We have no way to determine how the developers are integrating Facebook SSO at the back end.)  We used SSOScan to aggregate front-end integration choices and compare them with vulnerability reports.  Table~\ref{tab:ssoscan_study_front-end} summarizes the results.  Websites using client side SDKs and pre-configured widgets are more likely to misuse credentials (29.1\% and 15.5\% vs. 1.3\% in non SDK/widget implementations).  Our guess is that this is due to the way SDKs and widgets conveniently expose raw \emph{access\_token}, \emph{signed\_request}, or even user name Facebook ID values.  This convenience may lead to the developers to neglect to check the signature and the intended audience of the credential.  However, our results also show that websites using SDKs and widgets are better in hiding credentials (3.6\% and 2.2\% compared to 12.4\% vulnerable rate in SDK/widget implementations).  This is likely because such applications use the Facebook-provided landing page which has safe redirect URLs and no third-party content.  Applications built this way are secure unless the developers explicitly add the credentials in the page content or URL.
 
-\begin{table}[b]\centering
-\begin{threeparttable}
-\begin{tabular}{|c|r|r@{.}l|r@{.}l|}
-\multicolumn{1}{c}{Method} & \multicolumn{1}{c}{Number} & \multicolumn{2}{c}{Misuse} & \multicolumn{2}{c}{Leakage} \\
-\hline
-SDK & 578 & 29 & 1\% & 3 & 6\%\\
-\hline
-Widget & 132 & 15 & 5\% & 2 & 2\%\\
-\hline
-Custom Code & 950 & 1 & 3\% & 12 & 4\%\\
-\hline\hline %\specialrule{2.5pt}{1pt}{1pt}
-All & 1660  & 12 & 1\% & 8 & 6\%\\
-\hline
-\end{tabular}
-\end{threeparttable}
-\caption{Rate of credential misuse and credential leakage for different Facebook SSO front-end implementations}
-\label{tab:ssoscan_study_front-end}
-\end{table}
+\input{tables/ssoscan_integration_type.tex}
 
 \shortsection{Vulnerable application examples} We list two examples of vulnerabilities found by SSOScan here to illustrate the potential risks.  Section~\ref{sec:ssoscan_deployment} discusses our experiences reporting them to site owners.
 
@@ -277,37 +260,7 @@ To better understand the reasons why SSOScan fails, we manually studied all 228 
 
 \shortsection{Registration automation failure} By far, the most common reason for SSOScan to fail is due to complicated or highly-customized registration process.  We found 43.7\% of the sites that implement Facebook SSO still require users to perform additional actions to complete the registration (roughly evenly distributed by site popularity).  SSOScan failed to complete registration on 143 (33.6\%) of them.  Table~\ref{tab:ssoscan_study_failureReasons} shows the major reasons contributing to this failure ordered by their occurrences: 1) sites that require SSO users to link to an existing account or provide payment information to subscribe to the service; Currently SSOScan cannot handle the ``linking'' action: automatically registering a ``traditional'' account and perform the linking poses an out-of-scope challenge --- doing so often requires solving CAPTCHAs\footnote{On the contrary, most test applications (942 out of 973, see Section~\ref{sec:ssoscan_study_automationFailReasons}) do not ask users to solve CAPTCHAs when an account is created through SSO.  This is a reasonable practice, since the user who is able to provide a valid Facebook account should have already passed Facebook's Turing test, and adding additional CAPTCHAs would be unnecessarily annoying to the users.}; 2) registration forms that include CAPTCHAs; 3) special input elements (e.g. \code{div}, \code{span} or \code{image} as opposed to \code{input}) cannot be found automatically, or special requirements for the input that cannot be fulfilled; 4) sites where the registration submission button cannot be located; 5) sites that requires users to confirm email addresses before continuing (usually this involves clicking a link in an email sent by the server to the user's email address); and 6) sites that insecurely send registration data using a non-HTTPS form which causes the testing browser to pop up a warning and stall.
 
- \begin{table}[t]
- \begin{center}
- \begin{threeparttable}
- \begin{tabular}{|c|r|r@{.}l|}
- \hline
- \textbf{Failure reason} & \multicolumn{1}{|c|}{\textbf{Number}} & \multicolumn{2}{|c|}{\textbf{Percent}}\\
- \hline
- linking/subscription& 51 & 28 & 1\%\\
- \hline
- CAPTCHAs & 34 & 18 & 8\%\\
- \hline
- identity invisible to oracle & 28 & 15 & 5\%\\
- \hline
- atypical input elements & 20 & 11 & 0\%\\
- \hline
- atypical submit buttons & 19 & 10 & 5\%\\
- \hline
- email verification & 10 & 5 & 5\%\\
- \hline
- non-HTTPS submission forms & 9 & 5 & 0\%\\
- \hline
- other (e.g., timeouts) & 10 & 5 & 5\%\\
- \hline\hline
- Total failures & 181 & 100 &0\%\\
- \hline
- \end{tabular}
- \end{threeparttable}
- \end{center}
- \caption{Automation Failure Causes (top 10,000 sites)}
- \label{tab:ssoscan_study_failureReasons}
- \end{table}
+\input{tables/ssoscan_failure_reasons.tex}
 
 \shortsection{Oracle confusion} SSOScan may also fail because the oracle reports failure (15.5\%), which occurs when it detects the login button no longer exists after Facebook SSO but cannot identify the session identity.  We manually analyzed such cases and found the biggest obstacle is that the application homepage does not include any identifying information at all.  For example, instead of showing `Welcome, \{username\}', it shows `Welcome, customer', or simply `Welcome', and the user name is only displayed when accessing the account information page.  In other cases, SSO authentication serves only a sub-service of the website such as its affiliated forum, but not the homepage which does not display any identifying information.
 

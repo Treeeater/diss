@@ -1,0 +1,18 @@
+\begin{table}[htb]
+\begin{center}
+\footnotesize
+\begin{tabular}{|c|c|}
+\hline
+\multicolumn{1}{|c|}{Attack Type} & \multicolumn{1}{|c|}{Examples} \\ \hline
+Directly calling DOM API to get node handlers & \code{document.getElementById()}, \code{nextSibling()}\\
+\hline
+Directly calling DOM API to modify nodes & \code{nodeHandler.setAttribute()}, \code{innerHTML=}\\
+\hline
+Probing host context for private vars & accessing host objects, explicitly calling event handlers \\
+\hline
+Accessing special properties & \code{document.cookie}, \code{open()}, \code{document.location} \\
+\hline
+\end{tabular}
+\caption{Evaluated Attack Vectors}\label{tab:esorics_security_eval_vector}
+\end{center}
+\end{table}

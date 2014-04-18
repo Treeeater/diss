@@ -1,4 +1,4 @@
-\chapter{Restricting Untrusted Third-Party Code}
+\chapter[Restricting Untrusted Third-Party Code] {Restricting Untrusted Third-Party Code\footnote{The contents of this chapter is based on the paper: Protecting Private Web Content From Embedded Scripts~\cite{Zhou-ESORICS}.}}
 \label{sec:esorics}
 
 In contrast to the last two chapters, we consider the scenario where the third-party service provider is not trusted to perform any security-critical actions on the application in this chapter.  For example, the services of interest include web analytics and tracking scripts, online advertising and social widgets, as described in Chapter~\ref{sec:bg_mashup_apps}.  Nikiforakis et al. showed that many popular sites include several third-party scripts per page and the trend is increasing~\cite{Nikiforakis:2012:YYI:2382196.2382274}.  Although such services are widely embedded in both web and mobile applications, we focus on web applications only in this dissertation.  
@@ -10,12 +10,24 @@ Our goal under this threat model is different from the previous chapter: we aim 
 \section{Prior Works}
 \label{sec:esorics_related_works}
 
+Much previous work has targeted the challenge of safely executing scripts from untrusted sources in a web page.  The two main approaches are to either rewrite the JavaScript code or to modify the browsers.  Here, we categorize previous works by their major mechanisms.
+
+\shortsection{Isolating execution environments} Barth et al.'s \emph{isolated worlds} mechanism is designed to protect browsers from extension vulnerabilities~\cite{extension}.  The mechanism they introduced separates extensions from each other by dividing the JavaScript execution context into several independent ones.  We adopt this mechanism to isolate webpage scripts.  Since this work is not targeting privacy, they did not mediate DOM accesses.  
+
+Adjail~\cite{Adjail} closely relates to our work.  It moves third-party scripts into a shadow iframe with a different domain name, using the browser's built-in same-origin policy to isolate the execution and sets up a restricted communication channel between the shadow iframe and host page.  This approach does not require any browser modification, but has several limitations including inflexible policies (parent node can only have the intersection of children's privileges), difficulty to accommodate two or more embedded collaborating advertising scripts and complicated maneuvers needed to preserve impressions and clicks.  The HTML5 standard also provides a way of executing JavaScript in different threads using \emph{Web Workers}~\cite{WebWorkers}.  The goal of this is mainly to improve JavaScript performance by allowing parallel execution and preventing misbehaving scripts from halting the browser.  However, scripts running inside a worker shall be computation-heavy and do not have access to DOM APIs, therefore the feature is not appropriate to be used by embedding third-party services.  
+
+\shortsection{Rewriting JavaScript} ADsafe~\cite{ADsafe} restricts the power of advertising scripts by using a static verifier to limit them to a safe subset JavaScript that excludes most global variables and dangerous statements such as \code{eval}.  Caja~\cite{caja} also limits JavaScript, but offers an automatic code transformation tool.  The rewriting procedure of Caja is very complicated and cannot always preserve original script functionality and debug-ability.  For example, a serious compatibility issue with these works is that they often do not allow the use of \code{eval} in JavaScripts as dynamically introduced code undermines the soundness of static analysis.  However, according to Richards et al.~\cite{Richards:2010:ADB:1806596.1806598}, such usage is actually very popular among high-ranked websites.
+
+\shortsection{Extending Browsers}  Jim et al. proposed a per-script policy to defend against XSS attacks~\cite{Beep}. The basic idea is to create a whitelist of the hash of all scripts that are allowed to run on the page.  MashupOS~\cite{MashupOS} intends to fix the integrator-provider security gap by introducing several new tags that can be used to restrict embedded scripts in different ways.  However, it cannot support the policies needed to handle current advertising scripts since MashupOS requires the third-party content to be embedded in a particular way.  Following this work, Crites et al.~\cite{OMash} proposed a policy that abandons the same-origin policy (SOP) by allowing the integrator to specify public/private web content.  Completely abandoning SOP would require significant changes to websites.  Jayaraman et al.~\cite{escudo} introduced OS protection ring idea to DOM access control.  Each node is assigned a privilege level and only scripts within appropriate rings can access that DOM element.  Compared to these works, our work has the most expressive and flexible policies and easiest deployment.
+
+An alternative to restricting the private information third-party scripts can access is to completely do the content-related computation inside the browser, therefore leaking no information at all.  This approach is taken by Adnostic~\cite{Adnostic} and RePriv~\cite{RePriv}, but since it requires making significant changes to the web infrastructure, we do not consider it further here.
+
 \section{Security Policy}
 \label{sec:esorics_policy}
 
 Our protection policies are separated into two categories: JavaScript execution isolation as explained in Chapter~\ref{sec:esorics_policy_iso}, and DOM access control as explained in Chapter~\ref{sec:esorics_policy_dom}.
 
-\subsection{Execution Isolation} 
+\subsection{Script Execution Isolation} 
 \label{sec:esorics_policy_iso}
 One of our primary goals is to let the web developers easily group third party scripts so that some of them may collaborate with each other while still remaining separated from other third party scripts and host page scripts.  To facilitate this we add a new attribute to the script tag: \code{worldID=}\emph{string}.  This idea originates from Barth et al.'s \emph{isolated world} concept~\cite{extension} which was developed to isolate browser extensions.  Each world with a unique \code{worldID} is isolated from all other worlds.  The \code{worldID} attribute also serves as the principal for scripts for controlling access to DOM nodes (discussed in Section~\ref{sec:esorics_policy_dom}).
 \lstset{xleftmargin=.25\textwidth,xrightmargin=.1\textwidth}
@@ -90,12 +102,159 @@ One of our design goals is to minimize the changes have to be made both on serve
 
 We use the Squid proxy server as our mediating proxy.  It supports ICAP (Internet Content Adaptation Protocol), which allows us to modify web traffic on the fly.  For convenience, we run the Squid server in the same machine as our modified browser, however one can definitely move that onto an intermediary node along the routing path for better centralized control.  We use GreasySpoon~\cite{GreasySpoon} for the ICAP server implementation.
 
-This design cannot deal with SSL web traffic since the proxy will not be able to see the decrypted traffic.  The Chromium development group is currently (as of April 2014) still working to implement \keyword{webRequest} and \keyword{webNavigation} as extension APIs~\cite{webRequest}.  Once these are implemented, we can move our proxy server inside the browser thus making it work on SSL/TLS traffic and easing deployment.  
+This design cannot deal with SSL web traffic since the proxy will not be able to see the decrypted traffic.  The Chromium development group is currently (as of April 2014) still working to implement \code{webRequest} and \code{webNavigation} as extension APIs~\cite{webRequest}.  Once these are implemented, we can move our proxy server inside the browser thus making it work on SSL/TLS traffic and easing deployment.  
   
 The content adaptation is divided into two main functions: third-party script identification and public node marking.
+
+\shortsection{Third-party Script Identification} The ICAP server examines the response header.  For each script with a source tag we compare the script's source with the host domain.  For scripts that come from different domains, we add \code{worldID} attributes that identify the origin and indicate that they are not trusted by the host. 
+
+\shortsection{Identifying Public Nodes} To identify public content, our proxy compares the responses from two requests, one with the user's credentials and one without, and denotes any content that is identical in both responses as public.  For example, assume a user visits \url{nytimes.com} so the browser sends a request with that user's credentials as cookies to \url{nytimes.com}.  Once our ICAP server sees the incoming response it sends another request almost identical to the first one except with the cookie stripped.  Then it collects and stores this response, denoted $R_{\textrm{pub}}$, which is the response for the stripped request.  The original response is denoted $R_{\textrm{priv}}$.  
+
+Once both responses are ready, the proxy executes a differencing algorithm.  This is similar to a simple text diff, except it follows the node structure.  Initially, all nodes are assumed to be private.  Then, any node in $R_{\textrm{priv}}$ that appears identically in $R_{\textrm{pub}}$ is marked as public.  For write accesses, we make sure all children of a root node are the same before marking the root node public.  Read access is slightly more relaxed than write access, since we already modified \code{innerHTML} function to conceal private nodes inside a subtree.  We mark a node public as long as its attributes and immediate textnode children are the same.  The algorithm for comparing the responses is given below.
+
+\begin{algorithm}
+\caption{Automatic Policy Generation Algorithm}\label{alg:esorics_policy_generation}
+\begin{algorithmic}
+\While{$Browser\ initiate\ request\ Q_{priv}$}
+	\State $R_{priv}\gets originalResponse$;
+  \State $TrustedHost.push(R_{priv}.header.host)$;
+	\ForAll{$script\ S\ in\ R_{priv}$}
+	  \If {$!\ TrustedHost.contains(S)$}
+			\State $S.worldID \gets S.src$;
+			\State $UntrustedScript.push(S.src)$;
+		\EndIf
+	\EndFor
+	\If {$(Q_{priv}.requestType == GET)$}
+		\If {$host \notin Cache \wedge timeout \leq T$}
+			\State $Send\ new\ request\ Q_{pub}\ with\ cookies\ stripped$
+			\State $R_{pub} \gets Q_{pub}.response$
+			\State $Cache \gets R_{pub}$
+		\Else
+			\State $R_{pub} \gets Cache.get(host)$
+		\EndIf
+		\ForAll {$node\ N\ in R_{priv}$}
+			\ForAll {$node\ N'\ in R_{pub}$}
+				\If {$N'.attrs == N.attrs \wedge N'.innerHTML == N.innerHTML$}
+					\State $N.WACL \gets UntrustedScript.all$;
+				\EndIf
+				\If {$N'.attrs == N.attrs \wedge N'.textChildren == N.textChildren$}
+					\State $N.RACL \gets UntrustedScript.all;$;
+				\EndIf
+			\EndFor
+		\EndFor
+  \EndIf
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+\shortsection{State-Changing Requests}  Our policy learning process requires sending duplicate requests to the server.  This could have undesired side effects if an unauthenticated request can alter server state.  To limit this, \code{POST} requests are ignored since firing them twice should result in undesired state changes at the server.  Hence, the entire response from a \code{POST} request is considered private.  The HTML specification suggests \code{GET} methods to be idempotent~\cite{Idempotent}, but many sites do change persistent state for \code{GET} requests.  For example, a forum site might use a \code{GET} request for anonymous postings.  If we submit the request twice the anonymous comment may be posted twice since no credentials are required for the posting.  
+
+To prevent this, we consider two possible solutions.  The first is for the server to annotate non-idempotent pages.  The first time user visits a site, if the proxy has not yet seen it before, it skips the request duplication and looks for idempotent field in the response header.  Servers can send \code{idempotent=false} in the header to indicate that the browser should not to send duplicate requests for this page.  If the idempotent field is not detected in the first response we default the proxy behavior to proceed as if the site requests are idempotent.  
+
+A second approach is to set up a third-party service like AdBlock and have users subscribe to this service.  A centralized server will collect information from users and correlate responses to mark private data.  If we have an authority like this we do not necessarily need to send two requests since other users may have already fired similar requests and the server should already have recorded the responses.  This centralized server should be established at the ISP so that we do not introduce extra vulnerable point in the network path.  In this case the ISP server's identification accuracy would affect many more users than a local proxy, but it is also convenient to manually correct the mistakes as a center server.  
+
+The biggest disadvantage against a centralized service is user's privacy concerns.  In most situations, users and the host may not want to disclose decrypted traces which are collected and differenced at a third-party (even if this happens at the ISP, it is still not supposed to see SSL/TLS decrypted traffic).  Techniques such as secure computation~\cite{Yao:1986:GES:1382439.1382944,Huang:2011:FST:2028067.2028102} could be used, but are out of the scope of this dissertation.
 
 \section{Implementation}
 \label{sec:esorics_impl}
 
+We base our implementation on Google's open source Chromium project.  We built Chromium on Windows 7 under Visual Studio 2008.  Approximately 1500 lines of code were added or modified, mostly in the WebKit DOM implementations and the bindings of V8 (the JavaScript interpreter) and WebKit DOM, but leaving V8 unmodified.  Hence, we believe our implementation could be adapted to other browsers that use WebKit as well, with the effort of adding \emph{isolated world} support.   
+
+Figure~\ref{fig:esorics_impl_flow} illustrates how a DOM API call is executed in our system.  In step 1, the WebKit parser parses a raw HTML file from a remote server and passes each script node to the \emph{ScriptController} in WebKit/V8 bindings to set up the execution environment.  If the context associated with the current worldID is already created,  \emph{ScriptController} instructs V8 to enter, otherwise it creates a new world.  In step 2, the \emph{ScriptController} sends the script to V8 to initialize execution.  At some point, V8 may encounter a DOM API call and invoke a callback to the corresponding function using the WebKit/V8 bindings (step 3).  In step 4, that callback function is modified to include policy enforcing code that checks the \code{worldID} against the ACLs of the node.  After passing the policy checking, the call is forwarded to the WebKit DOM implementation (step 5).  In cases where modification happens, the target node is also tainted according to rules explained in Section~\ref{sec:esorics_impl_taint}.  Finally, the return value is returned from WebKit DOM back to V8 (step 6).  Next, we provided details on how we enforce script isolation and mediate access to the DOM.  Section~\ref{sec:esorics_impl_dynamicscripts} discusses some special issues for handling dynamically-generated scripts.
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=\textwidth]{figures/chapter5/esorics_impl_flow}
+\caption{Modified Chromium Workflow}
+\label{fig:esorics_impl_flow}
+\end{figure}
+
+\subsection{Script Execution Isolation} 
+
+Isolating any two scripts by putting them into different execution contexts allows us to specify per-script policies.  We adopt Barth et al.'s \emph{isolated world} mechanism~\cite{extension} on Google Chrome.  This mechanism was originally designed to separate the execution context of different browser extensions, so that security compromise of one extension does not lead to the compromise of the host page or other extensions.  
+
+The DOM-to-JS execution context one-to-one mapping is changed to be one-to-many: each context maintains a mapping table to the DOM elements of the host page.  This ensures that only host objects are shared among all worlds, but not native or custom objects.  Note that a malicious script can still interfere with the host script execution by making changes to host page DOM elements (the changes are propagated all other worlds), however, page-specific policies can be enforced to disallow such modifications.  In our work we extended this mechanism to apply to common embedded scripts in addition to extension content scripts.  We modified Chrome to recognize the attribute \code{worldID} so that the WebCore ScriptController can support different JavaScript execution contexts according to scripts' \code{worldID}.  A hashmap of all the execution contexts is instantiated on a per-page basis to enable scripts to execute in the correct context.  As long as the \code{worldID}s are not the same, the two scripts run in completely different contexts and cannot access each other's variables or functions. 
+
+\shortsection{Host Script Access} Now we address the compatibility issue: granting the host scripts access to the third party objects without compromising previous protections.  There are two interesting facts here:  First, all objects defined in the script are properties of the \code{window} object.  Second, it is possible to inject arbitrary objects into another context using Google V8 JavaScript engine APIs.  Combining these two together, we modified the browser to automatically grab the handle of the \code{window} object of that context and inject it into the host context as soon as a third party script execution context with \code{SharedLibId} is created.  
+
+\subsection{DOM Access Control} 
+Fine-grained policies mean we can provide different access permissions to different scripts.  We do this by either hiding inaccessible information from scripts based on their \code{worldID}, or in cases where more expressive policies are needed, by mediating access requests.
+
+Our implementation mediates all DOM API getter functions to check the ACL of target node as shown in Figure~\ref{fig:esorics_impl_JSDOMAPI}.  The upperleft and the lowerleft squares indicate two different execution worlds.  As each world tries to grab handles of different nodes or call getterAPIs on those nodes, some of them are thwarted by our mediation according to per-page policies;  the ones that get through are executed normally.  When a script attempts to request a reference of a hidden node or call any API on a hidden node, it will instead receive a fabricated result.  We return the \code{v8::null()} object for functions that should have returned a DOM node wrapper;  we return an empty string object for functions that should have returned a string object.  These results avoid leaking any information, but provide a good likelihood that a well-written script will be able to continue (we confirm this in our experiments, as reported in Section~\ref{sec:esorics_eval_compatibility-experiments}). 
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[width=\textwidth]{figures/chapter5/esorics_impl_JSDOMAPI}
+\caption{JavaScript to DOM API Mediation}
+\label{fig:esorics_impl_JSDOMAPI}
+\end{figure}
+
+Mediated DOM APIs include all node handler getters as well as APIs that can be called after a node handler is held, such as \code{getAttribute()}.  One of the trickier APIs is the \code{innerHTML} getter, as well as similarly-functioning APIs.  These APIs are designed to return the text/HTML markup of all children of this node.  Other related works~\cite{Adjail,MashupOS} that define the parent node cannot be assigned higher privileges than the intersection of its children does not have to pay specific attention to this.  Since our policies are more flexible, calling such APIs may pose a privacy leakage threat in certain scenarios --- e.g. some of the children nodes may have been marked private while the root node is marked public, and calling the \code{innerHTML} getter on parent nodes may reveal confidential information in its children.  To remedy this, we modify the DOM implementation of the \code{innerHTML} callback and other similar APIs to filter out private nodes from the result.  
+
+\shortsection{Read-Only Access} Providing read-only or other restricted access is more complex since it requires giving the script a handle to the node.  We mediate five ways a script may modify a node:
+1) Directly changing the property (Chrome calls the internal setter function) of that node; 
+2) Modifying the style of that node; 
+3) Modifying the children of that node; 
+4) Modifying the attribute of that node by calling node-specific JS-DOM APIs, (e.g., \code{setAttribute()}, \code{textContent}, etc.); 
+5) Attaching/removing any event handlers to that node (e.g.~\code{addeventhandler()}).
+
+Each of these is handled in a completely different fashion in Chromium, so to impose a read-only policy it is necessary to address all of them.  In addition, the security attributes, i.e. \code{WACL}, \code{RACL}, and \code{worldID} should never be changed by scripts other than the host since this would allow untrusted scripts to change the policy.  We therefore modified the attribute setters to check attribute names and accessing script's \code{worldID} to prevent unauthorized modifications to these attributes. 
+
+\subsection{Lightweight Taint Tracking}
+\label{sec:esorics_impl_taint}
+
+Since a node may initially contain only public information, but later be modified by a host script to contain private information, it is important to update the privacy of a node when it is modified by a script.  To do this, we employ a conservative taint-tracking technique.  A DOM node is marked as private as soon as any host script modifies it.  Nodes that are modified by a script with \code{worldID=i} is also only visible to scripts in world \emph{i} as well as the host scripts.  This use of AJAX/XMLHTTPRequest to dynamically authenticate users and update respective content is not uncommon among the sites we have tested (for example, \url{cnn.com} uses JavaScript to update the user name box on the upper right corner of the page after the entire page is loaded).
+
+Our experiments show that this conservative tainting policy could occasionally lead to compatibility problems when too many nodes are tainted, we relaxed tainting by adding a heuristic to only taint the nodes whose text content or source attributes have changed.  This lowers the false positive rate by ignoring the CSS and location changes of the nodes.  In case this policy is inappropriate for certain websites, developers can always resort to manually marking these nodes as private using the \code{WACL} and/or \code{RACL} attributes.  This heuristic does not pose a privacy risk as long as the provided policies are accurate, but enables side-channels between scripts that could otherwise not communicate since they may be able to modify a node that can be read by the other script in ways that are allowed by the heuristic.  We do not consider this a serious security risk since private data is only exposed to a third-party when explicitly allowed by the policy, so although that script can now leak the data to a different third-party script it could also misuse the data directly.  
+
+\subsection{Dynamic Scripting}
+\label{sec:esorics_impl_dynamicscripts}
+Many previous works feared the consequences of allowing this dynamically-generated code and simply excluded dynamic parts of JavaScript such as \code{eval}.  This fear is justified for any rewriting-based approach since dynamically generated code may circumvent the rewriting.  In our case, we can support dynamically introduced scripts since policies are enforced at runtime, but need to be careful to assign the correct policies to these scripts.  When the generated scripts execute in different contexts from the scripts that created them, it may cause broken functionalities (variables and functions that should be shared are now isolated) as well as privilege escalations (less privileged scripts are able to dynamically create a higher privileged script).  
+
+We solve this problem by propagating \code{worldID}s: scripts should automatically inherit the \code{worldID} from their creator, thus executing within the same context as their creators. We mediate all four ways to dynamically evaluate a script: 1) calling \code{eval()} or \code{setTimeOut()}, etc.; 2) define an anchor element with JavaScript pseudo-protocol (i.e., \code{javascript:code;}); 3) creating a script node with arbitrary code;  or 4) embedding a new script node by calling \code{document.write()} or \code{document.writeln}.  The first two cases can be handled by modifying respective script initialization functions in the \code{V8ScheduledAction} and \code{ScriptController} class.  In the third case we need to strip any \code{worldID} attributes from created node and append the correct one (its creator's \code{worldID}) to it.  To address the last situation, we modified \code{document.write()} function to pre-process its argument and append the \code{worldID} attribute to all script nodes appearing in the new HTML content. 
+
+\shortsection{Event Handlers} In addition to the common way of executing a script by adding a DOM script node, third-party scripts may run arbitrary code in the context of host scripts by adding that code as an event handler of another DOM node, assuming the event can be triggered (e.g., using the \code{onload} event).  Event handlers can be dynamically added by JavaScript APIs or explicitly defined as an attribute, for example: \code{<div onclick = >}.   There are four possible ways to attach an event handler: 1) direct assignment, e.g. \code{someNode.onclick =}; 2) \code{setAttribute}; 3) \code{addEventListener}; or 4) creating an attribute node an attaching it to a node.  To preserve policy enforcement and execution context, we must ensure the event handler code executes within the same context of the script that attached them.  For each of the four ways of attaching event handlers, we propagate the \code{worldID} to make sure that the event handler attached executes within the correct context.  
+
+Note that after the host script registers an event handler, third party scripts may attempt to call that event handler (assuming it has read access to that node), by either retrieving the event handler function directly or synthesize an event.  The former exploitable path can be blocked by mediating all getters of event handlers to make sure the caller's \code{worldID} is identical to the callee's, however, our current implementation does not block the latter scenario (synthesizing events) for compatibility purposes.  We are aware that a clever attacker may construct an attack by concatenating pieces of event handlers together (similar to return-oriented programming~\cite{Shacham:2007:GIF:1315245.1315313}), but such possibilities shall be very low since the number of event handlers are relatively low in comparison to native programs.
+
 \section{System Evaluation}
 \label{sec:esorics_evaluation}
+
+We evaluated security or our implementation by manually testing a range of possible attacks, its compatibility with a sample of web applications, and the effectiveness of the automatic policy generator.
+
+\subsection{Security}
+
+We tested our implementation against all the attack vectors we could identify from the W3C DOM~\cite{DOMSpec} and ECMA specification~\cite{ECMAScript}.  Table~\ref{tab:esorics_security_eval_vector} lists the attack vectors and examples of the attacks we tested.  For each attack vector, we followed the W3C DOM/ECMAscript specification and created at least one test case for each feature in the specification and confirmed that the attack is thwarted by our implementation.  Since most of these attack vectors are handled by a few functions in the Chromium implementation, this provides a sufficiently high level of confidence that our implementation is not vulnerable to these attacks.
+
+\input{tables/esorics_security_eval.tex}
+
+\subsection{Compatibility}
+\label{sec:esorics_eval_compatibility-experiments}
+To evaluate how much our defense mechanisms disrupts benign functionality of typical web applications, we conducted experiments on a proof-of-concept website we built ourselves and on a broad sampling of existing websites.
+
+The first experiment we do is to construct a pre-configured webpage that already has all the required annotations and third-party scripts.  This page functions well in our modified browser.  Both advertising networks we tested (Google Adsense and Clicksor) behave normally during testing with no errors even while hiding as much user information as possible from those scripts by marking content nodes as private.  Security properties verified previously ensure that embedded third-party scripts cannot access those information.  
+
+For real-world web applications, we picked 60 sites altogether to test the compatibility against existing websites, sampling a range of sites based on popularity.  We chose 20 from top US 50 sites according to Alexa.com, another 20 sites from sites ranked 50-300 and 20 sites from below the rank of 1000 and tested basic functionalities such as login and site-specific operations.  These sites contained a variety of third-party scripts including advertising networks (e.g. Doubleclick, Adsonar, Ad4game, etc.) and web analytics and tracking scripts.  We isolated the third-party scripts and added the security policies on nodes that carry user data.  We did not modify the embedded scripts.  Policies for these pages are automatically generated by our policy learner which we will evaluate more extensively in the following chapter.  Here we ensure the third-party script identification are correct.  That is, in case a compatibility issue arises and that's due to the errors of automatic third-party script identification (the same issues as explained in Chapter~\ref{sec:toolEffectiveness}, where we discussed the detection accuracy of SSOScan), we manually correct the policies and redo the test.  We discuss situations where policy learner produces an incorrect policy in Section~\ref{sec:esorics_eval_policyinference}.
+
+To ensure maximum compatibility, we relaxed our policy learner to always give the \code{<head>} tag's write access to third-party scripts.  This was necessary since some analytics and ad network scripts inject script nodes in the head region.  This relaxation is done without compromising confidentiality due to the fine-grained nature of our policy: user-sensitive data is never revealed from children nodes of the \code{<head>} tag as long as the tags that directly containing the private information is marked private.
+
+With the assistance of our automatic policy generator and minimum manual annotation effort (mainly helping proxy server to recognize important library scripts as host scripts, e.g. jQuery), 46 out of 60 sites functioned without a problem.  However, 23 of which do require our manual identification of third-party scripts.  For example, we added aolcdn.com to aol.com's whitelist as trusted domain.  Four sites have non-standard HTML responses which triggered unrecoverable errors in our HTML parser; Four sites do not contain private information/use only SSL traffic which our current implementation of policy learner cannot handle;  Three sites have third-party scripts that try to access a private node and crashed in the process.  After a closer look at all these accesses, we find out that the private nodes identified by our policy learner are actually all false positives.  However we do not know what those third-party scripts will access after touching on a private node since it will crash immediately.  Another three sites show many JavaScript console errors mainly due to host script trying to access many guest objects (e.g. \code{_gaq} as mentioned before) but our policy learner cannot automatically append the guest global object before these accesses.  This scenario also happened in some other sites, but the access is simple and we manually added the object easily.  For more complicated cases, they can be addressed by either web developer's effort or dynamic modification within JavaScript Engine.
+
+\subsection{Policy Learning}
+\label{sec:esorics_eval_policyinference}
+To evaluate our automatic policy generator we ran our proxy on the sample websites and report the result of third-party script identification and private node marking here.  
+
+\shortsection{Third-party script identification}  We have explained that a trusted third-party script may be misclassified as untrusted because it is from a different origin in Chapter~\ref{sec:toolEffectiveness}.  In addition, an untrusted script may be misidentified as trusted.  This occurs when the host includes a third-party script using cut-and-paste.  For instance, Google Adsense and Google Analytics require host pages to include an inlined code snippet.  This is safer than an embedded script loaded from the remote site, since at least the host has the opportunity to see the script and knows that it is not vulnerable to a compromise of the remote server, but should still not have access to protected data on the page.  Our policy generator has no way to tell whether an inlined script is associated with another third-party script.  This causes certain functions to break due to the isolated execution environment of two mutually dependent scripts.  Our ad-hoc solution is to use heuristics to identify specific patterns in inlined scripts that correspond to commonly inlined scripts.  For example, we look for \code{_gat} or \code{_gaq} in an inlined script and mark scripts that contain them with the same \code{worldID} as the embedded Google Analytics script.  Since other scripts may now intentionally add such tokens in their scripts to confuse our policy generator, this is only a ad-hoc solution.  Ideally, service providers would add this \code{worldID} permanently in their snippets.
+
+\shortsection{Private Node Marking} In order to test the real-world private node marking accuracy of the policy generator, we tested the basic functionalities such as login and site-specific operations on the same sample sites used for the compatibility experiment.  The traffic is redirected to go through the proxy server where modifications are made to the responses (e.g. adding ACLs and \code{worldID}s).  We recorded the total number of nodes, total number of nodes marked public before login and after login, total number of third-party scripts existing on the page and the trusted domains needed to be manually added (e.g., scripts stored in content distribution networks and library scripts such as jQuery).
+
+\input{tables/esorics_eval_policystat.tex}
+
+Table~\ref{tab:esorics_eval_policystat} summarizes the results of our policy generation experiments.  The sample size and ranking denotes the total number of sites we selected from that range of ranking at Alexa.com.  ${Pct}_{Before}$ is the percentage of nodes that are marked private before login, and ${Pct}_{After}$ is the percentage after login.  ${Pct}_{Switched}$ is the percentage of node that switched from public to private after login.  The last two columns show the total number of third-party scripts on the host page and the number of trusted domains that need to be added to maintain functionality.
+
+There is a reasonable drop in the fraction of nodes that are public after we login to the page, which is exactly what we are expecting.  We can also see an increase in public content share after login as the ranking of sites goes lower, which indicates less private information are marked in less important sites.  
+
+Statistically, the average number of third-party scripts on a page grows as the sites become less popular.  This indicates that less popular sites might take bigger risks in embedding untrusted scripts than larger sites.  Finally, the number of trusted domains that have to be added averages less than one per site and drops lower as the ranking goes lower, consistent with the expectation that hosting scripts on alternate domains is more common with large sites.  This result also indicates that the effort required for developers to denote trusted sites is minimal.
+
+We also inspected the nodes that were marked as private in the abovementioned sites.  Most of them are information that most people would consider private such as user names, email addresses, personal recommendations and preferences.  In addition, some nodes that contain session-related advertisements and tags are also marked private, due to varying session-related attribute in those tags.  These false positives are more frequently seen on more popular sites, as their sites are more dynamic and complex.  The high false positive rate in high-profile sites is due to the limitation of our assumption: we do not assume the control over server side.  As we have stated before, one heavy-weight alternative would be to modify existing web frameworks and add private data taint-tracking to server side: Nodes would be automatically marked private if the information it contains are tainted.
+
