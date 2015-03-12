@@ -1,0 +1,15 @@
+\chapter[Understanding and Monitoring Untrusted Code]{Understanding and Monitoring Untrusted Code\footnote{The contents of this chapter is based on the paper: Understanding and Monitoring Embedded Web Scripts~\cite{FireInspector}.}}
+\label{sec:fireinspector}
+
+In Chapter~\ref{sec:esorics} we presented how fine-grained DOM access control can be achieved by modifying the Chromium browser, and a proxy-based automatic policy generator that infers private information based on differences of two responses.  While this is a solid first step, we think there are several issues with the design of the policy language and generator that may affect the usability of the tool.
+
+First, the policy generator yields plenty of false positives on complex sites that include lots of dynamic content.  Because the content served each time could be different even in the same session, according to the design the policy generator will deem these differences as private content and thus over-restrict the third-party scripts.
+
+Second, our previous solution does not offer site administrators a way to inspect and understand what is going on under the hood for third-party scripts.  Since the policy generator is likely to produce false positives (marking public content as private), admins will likely need to use a trial-and-error approach to make sure the strict policies do not break the scripts.  This process not only is tedious but may also expose more information than necessary for the scripts to work.  As add-on attributes to individual DOM nodes, the access control policies are hard to edit and maintain, especially across the entire website which may be consisted of many pages.  
+
+Second, the proxy-based policy generator will not work very well in practice due to the duplicated traffic overhead and unwanted server-side state change.  To comply with the policy generator, a website will have to ensure no unauthenticated requests can make any changes to server state, which is often not the case nowadays.  This drawback will likely be the most important resistance to the deployment of our previous approach.
+
+To avoid these issues, we now present an alternative design of a chain of server-side tools to assist developers to understand and monitor the third-party JavaScripts behavior.  Accesses to critical resources and policies for third-party scripts can be visually presented to the site administrators.  The visualization together with intelligible CSS/XPath selectors used in policy entries make them much easier to edit and maintain site-wide.
+
+The rest of this chapter is organized as follows: we first discuss ...
+

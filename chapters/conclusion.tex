@@ -1,1 +1,24 @@
 \chapter{Conclusion}
+
+This chapter begins with a summary of the thesis work (Chapter~\ref{sec:conclusion_summary}) and closes with Final remarks in Chapter~\ref{sec:conclusion_final}.
+
+\section{Summary}
+\label{sec:conclusion_summary}
+
+Protecting applications enabled by third-party services is a difficult yet crucial task.  In this dissertation we have presented our solutions to attack two aspects of this problem --- protecting integrated applications against outside threat, and protecting host applications against untrusted third-party code.
+
+Our work on explicating SDKs and APIs has shown that discovering vulnerabilities and documentation mistakes in third-party services can be done in a systematic fashion.  By modeling different system parts (concrete, restricted, and free modules) using different approaches, the vulnerabilities and pitfalls can be found in two ways --- one can learn about logic of critical parts of the system in the modeling process and discover vulnerabilities on their own; or the model checker can present counterexamples to the researcher and the counterexamples can be used to recreate the real-world attack vector.
+
+The SSOScan tool we developed can be used to quickly check applications for the discovered vulnerabilities and implementation mistakes.  Ideally, SSOScan should be deployed at application's distribution center such as Apple app store or Facebook app center.  The testing involves zero to minimum human assistance, usually lasts less than 10 minutes, and the success rate of automation is very high (80\%).  Although SSOScan prototype only checks for five vulnerabilities and only for Facebook Single Sign-On implementation, we believe that the automation framework we developed can be easily extended to check any vulnerabilities for any service, unless it requires application-specific user interaction pattern to simulate the attack vector.
+
+By inserting access mediation code into Chromium and Firefox browsers, we showed that fine-grained access monitoring and restriction on host resources can be achieved compared to same-origin policy which only offers an all-or-nothing access control model.  Our tools give site administrators a clear understanding of embedded third-party scripts behavior, boosting their confidences about the security and privacy of their websites.
+
+The various tools we developed can also enforce access control policies at client side or perform intrusion detection based on the policies.  To alleviate burdens from the site administrators, our tool chain also supports automatic policy generation;  This automatic process only requires minimum human assistance, and the policy candidates proposed are easy to understand and maintain over time.
+
+%\section{Contributions}
+%\label{sec:conclusion_contributions}
+
+\section{Conclusion}
+\label{sec:conclusion_final}
+
+We present solid steps toward improving the security and privacy of third-party service enabled applications.  We developed automatic techniques to discover SDK vulnerabilities, documentation mistakes, and vulnerable implementations; We also help developers understand, monitor, and restrict the behavior of third-party web scripts.  Although many challenges still await to be solved, the tools and techniques we developed advances the state-of-the-art and we anticipate they will shed light on future research to better protect third-party service integrations against security and privacy threats.

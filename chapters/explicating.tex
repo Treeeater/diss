@@ -26,8 +26,18 @@ Various techniques have been proposed to help automatically verify certain progr
 
 Several works have automatically inferred program invariants or specifications.  Daikon~\cite{ErnstGKN99,Ernst2000:PhD,ErnstCGN2001:TSE} automatically learns program invariants of variables (strings, certain data structures, etc.) by instrumenting the program, running test cases, collecting and analyzing program traces.  Felmetsger et al.~\cite{Felmetsger:2010:TAD:1929820.1929834} applies Daikon to web applications to detect logic vulnerabilities.  Yang and Evans~\cite{Yang:2004:DIT:996821.996832, Yang:2006:PMT:1134285.1134325} proposed approaches to discover temporal invariants by analyzing execution traces.  Weimer et al.~\cite{Weimer05miningtemporal,LeGoues:2012:MCQ:2122269.2122550} proposed automated and generic ways to mine temporal specifications based on the assumption that certain parts of the program are more error-prone than others, such as code with poor readability or traces that raise exceptions.  Sekar~\cite{DBLP:conf:ndss:Sekar09} does approximate string comparison to infer input/output relationship between web application requests and responses to help eliminate code injection attacks.  Such inference techniques generally require a large number of execution traces, as well as that the majority of them are correct.  This assumption is not necessarily true in our problem.  
 
-\subsection{OAuth Protocol Analysis}
+\subsection{Protocol Analysis}
 Bansal et al.~\cite{6266164} modeled OAuth 2.0 protocol and verified it using ProVerif~\cite{Blanchet:2001:ECP:872752.873511}.  They also built a library for future researchers to model web APIs into ProVerif language in a easier fashion.  Pai et al.~\cite{5966531} used Alloy framework~\cite{Alloy} to verify OAuth 2.0 and discovered a previously known vulnerability.  Sun et al.~\cite{Sun:2012:DDE:2382196.2382238} discussed a number of website problems affecting OAuth's effectiveness, such as not using HTTPS, having cross-site scripting and cross-site request forgery bugs.  The fact that both SSO services we studied are based on OAuth is mainly because of its widespread adoption, but the security issues we found concern the SDK and service implementations, rather than flaws inherent in the OAuth protocol.  
+
+\renewcommand{\thefootnote}{$\star$} 
+
+In addition to OAuth protocol analysis, Fett et al.\footnotemark[1]~\cite{Fett:2014:EMW:2650286.2650776} used mathematical model (in form of Pi calculus) to verify Mozilla Persona Single Sign-On, which follows BrowserID protocol.  They found a number of critical security flaws and reported to Mozilla team.  Dietz and Wallach~\cite{dietz2014hardening} investigated the weaknesses of TLS used in token transportation in the BrowserID protocol and proposed an extension of TLS to protect against potential token leakage vulnerability.  Again, the reason that we focus our work on OAuth protocol is because of its popularity and authorization capabilities (OpenID and BrowserID protocol does not support authorization), which may cause additional vulnerabilities.
+
+Similar to our goal of addressing the root cause of the vulnerabilities, Cao et al.\footnotemark[1]~\cite{Cao14} propose to completely redesign the client-IdP-RP communication.  They argue that the root cause of many SSO vulnerabilities are a result of the leaked and misused browser-relayed messages.  While we agree with this statement, requiring establishment of secure communication channels between all three parties would significantly change all current implementations of SSO integration.
+
+\footnotetext{Works done after our paper was published.}
+
+\renewcommand{\thefootnote}{\arabic{footnote}}
 
 \section{An Illustrative Example}
 \label{sec:explicating_illustrative_example}
@@ -36,7 +46,7 @@ To motivate our work, we describe a simple example in the context of the Microso
 
 \subsection{Intended Use}
 
-To start things from scratch, we assume the developer has no previous experience with such implementation.  The most reasonable first thought is to visit the developer guide\footnote{Information accurate as of April 2014} for Microsoft Live~\cite{LiveConnectDoc}.  This page provides code snippets in JavaScript, C\#, Objective-C and Java showing how to use Live Connect SDK to sign users into a client app.  Ignoring the irrelevant details, we generalize the code snippets to the authentication logic shown in Figure~\ref{fig:live_access_token}.
+To start things from scratch, we assume the developer has no previous experience with such implementation.  The most reasonable first thought is to visit the developer guide\footnote{Information accurate as of April 2014.} for Microsoft Live~\cite{LiveConnectDoc}.  This page provides code snippets in JavaScript, C\#, Objective-C and Java showing how to use Live Connect SDK to sign users into a client app.  Ignoring the irrelevant details, we generalize the code snippets to the authentication logic shown in Figure~\ref{fig:live_access_token}.
 
 \begin{figure}[hbt]
 \centering
