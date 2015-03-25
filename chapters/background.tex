@@ -3,27 +3,27 @@
 This chapter provides general necessary background on mashup applications, Single Sign-On services and its Facebook flavor.  Related works that are of interest with respect to certain techniques or specific applications are given later in the respective sections.
 
 \section{Mashup Applications}
-\label{sec:bg_mashup_apps}
-As we have stated in the introduction, modern applications are often composed of first party code and many third-party modules, which makes these applications a complex mashup~\cite{MashupDef}.  Mashups are common in web and mobile applications, as shown here in Figure~\ref{fig:mashup_example} as examples.
+\label{sec:bgMashupApps}
+As we have stated in the introduction, modern applications are often composed of first party code and many third-party modules, which makes these applications a complex mashup~\cite{MashupDef}.  Mashups are common in web and mobile applications, as shown here in Figure~\ref{fig:mashupExample} as examples.
 
 \begin{figure}[bth]
 \centering
-\includegraphics[width=\textwidth]{figures/chapter2/mashup_example}
+\includegraphics[width=\textwidth]{figures/chapter2/mashupExample}
 \caption{Modern mashup application examples}
-\label{fig:mashup_example}
+\label{fig:mashupExample}
 \end{figure}
 
 \subsection{Embedding mechanisms}
 
-The left of Figure~\ref{fig:mashup_example} is a screenshot taken from Yelp.com.  This page contains a number of third-party components.  The blue rounded rectangles highlight the advertisements injected onto this page.  In a web application context, the display of such advertisement is often bootstrapped by a JavaScript snippet directly embedded in the host page.  In addition to the elements that can be visually seen in the figure, there are numerous analytics and tracking scripts from multiple parties installed on this page, as shown in Figure~\ref{fig:analytics_example}.  The green rectangle highlights the Google Maps module embedded by Yelp.  Often times widgets like Google Maps, Facebook Like button or friend status are embedded in an \emph{iframe} in the host page.  
+The left of Figure~\ref{fig:mashupExample} is a screenshot taken from Yelp.com.  This page contains a number of third-party components.  The blue rounded rectangles highlight the advertisements injected onto this page.  In a web application context, the display of such advertisement is often bootstrapped by a JavaScript snippet directly embedded in the host page.  In addition to the elements that can be visually seen in the figure, there are numerous analytics and tracking scripts from multiple parties installed on this page, as shown in Figure~\ref{fig:analyticsExample}.  The green rectangle highlights the Google Maps module embedded by Yelp.  Often times widgets like Google Maps, Facebook Like button or friend status are embedded in an \emph{iframe} in the host page.  
 
-The right of Figure~\ref{fig:mashup_example} shows a screenshot taken from a popular Android application GasBuddy.  The application is used to find cheap gas stations near the user, and it embeds an advertisement from Google Admob, shown in the blue rounded rectangle.  To embed a mobile ad, the application developer often downloads an SDK from the advertisement provider and include it into the packaged application.  The developer will then need to specify where he or she wants the ad to be displayed, and any additional information that may help to increase the conversion rate.  Similar to the web platform, mobile applications also see a fast growing in the popularity of integrating analytics and tracking code.  
+The right of Figure~\ref{fig:mashupExample} shows a screenshot taken from a popular Android application GasBuddy.  The application is used to find cheap gas stations near the user, and it embeds an advertisement from Google Admob, shown in the blue rounded rectangle.  To embed a mobile ad, the application developer often downloads an SDK from the advertisement provider and include it into the packaged application.  The developer will then need to specify where he or she wants the ad to be displayed, and any additional information that may help to increase the conversion rate.  Similar to the web platform, mobile applications also see a fast growing in the popularity of integrating analytics and tracking code.  
 
 \begin{figure}[bth]
 \centering
-\includegraphics{figures/chapter2/analytics_example}
+\includegraphics{figures/chapter2/analyticsExample}
 \caption{Analytics and Tracking Scripts on Yelp.com}
-\label{fig:analytics_example}
+\label{fig:analyticsExample}
 \end{figure}
 
 \subsection{Third-Party Script Privileges}
@@ -35,7 +35,7 @@ We give an example in snippet~\ref{lst:exampleScriptAccess} to show what a direc
 
 After creating an image element in line 1, the script uses standard DOM APIs to obtain all first-party cookies from the host (line 2), as well as the password if the user has typed in (line 3).  It then sends this information off to evil.com by setting the source attribute of the newly created image element (line 4).  Although an asynchronous \code{XMLHTTPRequest} (i.e. AJAX request) is restricted by the same-origin policy and therefore cannot be used to exfiltrate this information, setting source to an image is not and such information can be transferred as GET parameters to the URL.  To obtain user passwords with greater success, the above code can be set to execute as an \code{onbeforeunload} event handler for the document object, which is triggered upon page navigation --- likely when the user has input his or her password and clicked the `login' button.
 
-The panacea appears to be simple: the host should embed all third-party code in iframes with different origins.  However, online advertising these days always employs history and contextual targeting~\cite{Gill:2013:BPF:2504730.2504768}.  This means the advertisements are fetched catering to the user's browsing history and the page content.  Accesses to these resources however, will be blocked by the \emph{all-or-nothing} access model enforced by the same-origin policy in all major browsers today if they were embedded in an iframe with different origin.  Although sometimes user tracking can be done by embedding an (almost) invisible image (a.k.a. web bug), any advanced tracking and analytics functionality can only be realized by a directly embedded script.  
+The panacea appears to be simple: the host should embed all third-party code in iframes with different origins.  However, online advertising these days always employs history and contextual targeting~\cite{Gill:2013:BPF:2504730.2504768}.  This means the advertisements are fetched catering to the user's browsing history and the page content.  Accesses to these resources however, will be blocked by the \emph{all-or-nothing} access model enforced by the same-origin policy in all major browsers today if they were embedded in an iframe with different origin.  Although sometimes user tracking can be done by embedding an (almost) invisible image (a.k.a. tracking pixel), any advanced tracking and analytics functionality can only be realized by a directly embedded script.  
 
 The high risks exposed by embedding third-party script is directly caused by the inflexibility of same-origin policy, which essentially lead to the host abandoning the built-in protection for functionality and advertisement revenue.  Motivated by this, we present our solution towards a much more flexible protection mechanism in Chapter~\ref{sec:esorics}.  To this end, we are focused on protecting web applications; similar approach to cover mobile applications is a promising future research direction but may pose additional challenges and is out of the scope of this dissertation.
 
@@ -45,18 +45,18 @@ Integrating security-critical third-party services, even when the service provid
 
 \begin{figure}[bth]
 \centering
-\includegraphics[width=\textwidth]{figures/chapter2/sso_example}
+\includegraphics[width=\textwidth]{figures/chapter2/ssoExample}
 \caption{Single Sign-On enabled applications}
-\label{fig:sso_example}
+\label{fig:ssoExample}
 \end{figure}
 
-Single Sign-On (SSO) service enables an relying party (RP) application developer to quickly implement its authentication functionality by redirecting users to log in through their account at the identity provider (IdP).  The application users also benefit from this since they do not need to remember and type in user names/passwords each time they log in to the application.  The relying party has the added benefit of possibly obtaining more information from the user's Facebook profile than they normally can through traditional registration, and may request privilege to post on users' walls to promote their business.  Figure~\ref{fig:sso_example} shows two screenshots from pinterest.com and huffingtonpost.com, and as long as the user is currently logged in to Facebook and has previously granted permissions to those two applications, he or she can simply click on the button to login.  
+Single Sign-On (SSO) service enables an relying party (RP) application developer to quickly implement its authentication functionality by redirecting users to log in through their account at the identity provider (IdP).  The application users also benefit from this since they do not need to remember and type in user names/passwords each time they log in to the application.  The relying party has the added benefit of possibly obtaining more information from the user's Facebook profile than they normally can through traditional registration, and may request privilege to post on users' walls to promote their business.  Figure~\ref{fig:ssoExample} shows two screenshots from pinterest.com and huffingtonpost.com, and as long as the user is currently logged in to Facebook and has previously granted permissions to those two applications, he or she can simply click on the button to login.  
 
 Up to date, the most widely deployed identity provider by far is Facebook, but several other popular options such as Twitter, Google Plus and Microsoft Live.  There is no official statistics from these major identity providers about their adoption rate, but the results we obtained by running SSOScan (described in Chapter~\ref{sec:ssoscan}) show that almost 10\% of the top-20,000 ranked sites implement Facebook SSO.
 
 \subsection{Integration approach}
 
-The most recommended approach to integrate SSO service is to use an SDK or widget provided by the IdP.  For example, Facebook issues JavaScript SDK for front-end integration of web applications, and many SDK choices for various back-end framework such as PHP and Python.  The developers will need to refer to documentations about the pre-defined functions in the SDK and call them when the user elects to login through SSO and when the SSO credentials are presented to the back-end server.  It is worth mentioning that although all the heavy-lifting (e.g. signature verification, request parameter crafting) is done by the SDK functions already, the developer would still need to make the calls to those functions to ensure a secure implementation.
+The most recommended approach to integrate SSO service is to use an SDK or widget provided by the IdP.  For example, Facebook issues JavaScript SDK for front-end integration of web applications, and many SDK choices for various back-end framework such as PHP and Python.  The developers will need to refer to documentations about the pre-defined functions in the SDK and call them when the user elects to login through SSO and when the SSO credentials are presented to the back-end server.  It is worth mentioning that although most heavy-lifting (e.g. signature verification, request parameter crafting) can be done by the SDK functions, the developer would still need to make calls to those functions to ensure a secure implementation.
 
 If experienced developers wish to further control and customize the process, IdPs like Facebook also provide documentations to their RESTful APIs.  Developers can craft HTTP requests to such APIs and parse the responses themselves without the help of SDKs, however, such process often requires a deeper understanding of the SSO protocol.
 
@@ -67,25 +67,25 @@ Although direct client support for SSO service is much less popular than the abo
 Finally, before starting to implement SSO, the application developer has to register the application at identity provider's service management center.  For Facebook, this is located at \url{http://developers.facebook.com/}.  This step is important, since Facebook needs to set up a secret known only to the developer and Facebook, and issue a valid application ID to the developer.  Such information are essential for correctly requesting and parsing in the SSO process.
 
 \subsection{The SSO protocols}
-\label{sec:bg_sso_protocol}
+\label{sec:bgSSOProtocol}
 All major identity providers follow one of the Single Sign-On protocol standards, the most popular of which are OAuth~\cite{OAuth2.0} (version 2.0 and 1.0a) and OpenID~\cite{openID}.  For this dissertation we are going to focus on the OAuth 2.0 protocol, which is used by Facebook SSO and Microsoft Live SSO service.  Individual IdPs may extend the protocol slightly and use different terms for credential types defined in the standard, and we highlight the workflow of Facebook's implementation of OAuth 2.0 which serves readers the best for understanding the rest of the dissertation.
 
 \subsection{Facebook OAuth 2.0 workflow}
 
-A typical Facebook OAuth flow involves three parties, as shown in Figure~\ref{fig:oauth_workflow}.  Alice (the user) first visits a web application (1) and elects to use SSO to login.  She is then redirected (2) to the Facebook's SSO entry point with a set of pre-configured parameters.  After Facebook confirms her login credentials (3), it will issue to Alice's browser the requested OAuth credentials (4), which will then be forwarded to the application back-end server (5).  The application server confirms the identity by either checking the credential signature or sending a round-trip traffic to Facebook depending on the credential type (6), and if everything checks out, authenticates the client as Alice (7).
+A typical Facebook OAuth flow involves three parties, as shown in Figure~\ref{fig:oauthWorkflow}.  Alice (the user) first visits a web application (1) and elects to use SSO to login.  She is then redirected (2) to the Facebook's SSO entry point with a set of pre-configured parameters.  After Facebook confirms her login credentials (3), it will issue to Alice's browser the requested OAuth credentials (4), which will then be forwarded to the application back-end server (5).  The application server confirms the identity by either checking the credential signature or sending a round-trip traffic to Facebook depending on the credential type (6), and if everything checks out, authenticates the client as Alice (7).
 
 \begin{figure}[bth]
 \centering
-\includegraphics[width=\textwidth]{figures/chapter2/oauth_workflow}
+\includegraphics[width=\textwidth]{figures/chapter2/oauthWorkflow}
 \caption{Typical OAuth Workflow}
-\label{fig:oauth_workflow}
+\label{fig:oauthWorkflow}
 \end{figure}
 
 In these steps, the relying party developer needs to pay special attention to step (2), (5) and (6) to ensure a vulnerability-free implementation, while the Facebook's back-end server takes care of (3) and (4).
 
 \subsection{Facebook Connect credential types}
 
-The OAuth 2.0 standard specifies that the IdP should return different types of credentials (shown in step 4 of Figure~\ref{fig:oauth_workflow}) based on different \emph{grant\_type} values submitted in the HTTP request.  Here we list the ones Facebook adopts, including an extended, Facebook-specific type.
+The OAuth 2.0 standard specifies that the IdP should return different types of credentials (shown in step 4 of Figure~\ref{fig:oauthWorkflow}) based on different \emph{grant\_type} values submitted in the HTTP request.  Here we list the ones Facebook adopts, including an extended, Facebook-specific type.
 
 \begin{itemize}
 

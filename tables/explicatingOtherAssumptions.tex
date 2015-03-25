@@ -1,0 +1,36 @@
+\begin{table}[t]
+ \scriptsize
+ \begin{center}
+ \begin{threeparttable}
+ \begin{tabular}{|c|c|c|c|}
+ \hline
+  SDK & Assumption & Impact & Proposed Fix \\
+ \hline
+ \multirow{2}{*}{\minitab[c]{B1 \\ (FB)}} & Result of getAccessToken returned to client is & App \emph{access\_token} is added to the & Develop checker to examine \\
+ & not equal to getApplicationAccessToken() & to the knowledge pool. & the traffic from FooApp\textsubscript{S}\\
+
+ \hline
+ \multirow{2}{*}{\minitab[c]{B2 \\ (FB)}} & In dialog\_oauth, assume & Alice's \emph{access\_token} or \emph{Code} for & Automatically scan if the \\
+ & FooApp.site\_domain != Mallory\_domain & FooApp is obtained by Mallory. & \emph{Site Domain} is properly set \\
+
+ \hline
+ \multirow{2}{*}{\minitab[c]{B3 \\ (FB)}} & Before FooApp\textsubscript{C} sends a request, assume & Alice's session is associated with & Enhance dev guide to require\\
+ & request.signed\_request.userId == \_Alice & Mallory's ID and \emph{access\_token}. & runtime check on FooApp\textsubscript{C} \\
+
+ \hline
+ \multirow{3}{*}{\minitab[c]{B4 \\ (LC)}} & \multirow{3}{*}{\minitab[c]{In HandleTokenResponse, assume \\ auth\_token.app\_ID == \_foo\_app\_ID}} & Alice's \emph{authentication\_token} for & Develop checker to scan\\
+ & & MalApp will be used by Mallory & if auth\_token signature \\
+ & & to log into FooAppS as Alice & is verified.\\
+
+ \hline
+ \multirow{3}{*}{\minitab[c]{B5 \\ (LC)}} & In constructRPCookiefromMallory, assume & Alice's ID associate with & \multirow{3}{*}{\minitab[c]{Enhance dev guide to require\\ runtime check on FooApp\textsubscript{S}}}\\
+ & RP\_Cookie.access\_token.user\_ID == & Mallory's access token, or vice &\\
+ & RP\_Cookie.authentication\_token.user\_ID & versa & \\
+
+ \hline
+ \end{tabular}
+ \end{threeparttable}
+ \end{center}
+ \caption{Other implicit assumptions uncovered using explication}
+ \label{tab:explicatingOtherAssumptions}
+ \end{table}

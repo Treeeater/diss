@@ -1,0 +1,31 @@
+procedure  {:inline 1} getUserFromAvailableData()  
+returns (user:User) {
+  if (IdP_Signed_Request_user_ID[sr] != _nobody) {
+    ...
+    user := IdP_Signed_Request_user_ID[sr];
+    call setPersistentData_user_id(user);
+    return;
+  }
+  call user := getPersistentData_user_id();
+  call persisted_at := getPersistentData_access_token();
+  call access_token := getAccessToken();
+  if (access_token >= 0 && 
+    !(user != _nobody && 
+    persisted_access_token == access_token)) {
+      call user := getUserFromAT(access_token);
+      if (user != _nobody) {      
+        call setPersistentData_user_id(user);
+      } else { 
+        call clearAllPersistentData();
+      }
+  }
+  return;
+}
+
+procedure {:inline 1} getLogoutUrl() 
+returns (API_id: API_ID, next_domain: Web_Domain, 
+next_API: API_ID, access_token: int)   {
+  API_id := API_id_FBConnectServer_login_php;
+  call access_token := getAccessToken();
+  call next_domain, next_API := getCurrentUrl();
+}

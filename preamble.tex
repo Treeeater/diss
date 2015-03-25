@@ -1,20 +1,25 @@
 \usepackage{url}
+\usepackage{ifpdf}
 % \usepackage{times}
 % \usepackage{mathptmx}
 % \usepackage{epstopdf}
-% \usepackage{verbatim}
+\usepackage{verbatim}
+\usepackage{setspace}
 % \usepackage{subfigure}
 % \usepackage[noend]{algorithmic}
-% \usepackage{stmaryrd}
+\usepackage{stmaryrd}
 \usepackage{amsmath}
 \usepackage{multirow}
 \usepackage{listings}
-% \usepackage{color}
-% \usepackage[sort]{cite}
-% \usepackage{graphicx}
-% \usepackage{graphics}
-% \usepackage{epsfig}
+\usepackage{color}
+\usepackage[sort]{cite}
+\usepackage{relsize}
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage{caption}
+\usepackage{epsfig}
 \usepackage{comment}
+\usepackage[nounderscore]{syntax}
 %\usepackage{enumitem}
 \usepackage{algorithm}
 %\usepackage[perpage,para,symbol*]{footmisc}
@@ -22,16 +27,13 @@
 \MakePerPage{footnote} %the perpage package command
 \usepackage{algorithmicx}
 \usepackage{algpseudocode}
-%\usepackage{varwidth}
+\usepackage{varwidth}
 \usepackage{listings}
 \usepackage{fixltx2e}
-% \usepackage{graphicx}
-% \usepackage{xspace}
-% \usepackage{multirow}
-% \usepackage{makeidx}
+\usepackage{xspace}
+\usepackage{makeidx}
 \usepackage{threeparttable}
-% \usepackage{booktabs}
-%\usepackage{color}
+\usepackage{booktabs}
 \usepackage[usenames,dvipsnames]{xcolor}
 
 \newcommand\shortsection[1]{\vspace*{6pt}{\noindent\bf #1.}}
@@ -53,7 +55,22 @@
 \algnewcommand{\NOT}{\textbf{not}}
 
 \newcommand{\code}[1]{{\small\lstinline!#1!}}
+\newcommand{\codesmall}[1]{{\scriptsize\lstinline!#1!}}
+
+% from SSOScan
 \newcommand{\toolName}{SSOScan\xspace}
+% from Oakland15
+\newcommand{\vis}{Visualizer\xspace}
+\newcommand{\pg}{Policy\-Generator\xspace}
+\newcommand{\st}{Script\-Inspector\xspace}
+\def\policy{\lstinline[basicstyle=\sffamily\small,keywordstyle={},language=policy]}
+\lstdefinelanguage{policy}{
+  keywords={sub, root},
+  keywordstyle=\bfseries,
+  commentstyle=\color{purple}\rmfamily\itseries
+}
+
+
 \newcommand{\var}[1]{{\ttfamily#1}}% variable
 \hyphenation{SSO-Scan}
 \lstdefinelanguage{JavaScript}{
